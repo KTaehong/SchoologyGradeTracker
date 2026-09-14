@@ -1,0 +1,19 @@
+name: bessy_server
+description: >-
+  BessyV2 application/API tier — the hosted service that sits between the Flutter
+  clients and the PostgreSQL system of record. Student, Caregiver and
+  Admin/Support API sets, auth/identity, gradebook sync + change detection, and
+  audited system-administration tooling.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  crypto: ^3.0.3
+
+dev_dependencies:
+  test: ^1.25.0

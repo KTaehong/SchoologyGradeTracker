@@ -1,0 +1,749 @@
+<title>Bessy</title>
+<meta name="description" content="Bessy grades demo — real Schoology structure, cascading screenshot import (auto-sort class then category, manual fallback), iCal + report import in Settings." />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --ground: #ECECF3; --surface: #FFFFFF; --surface-2: #F3F3F8;
+    --ink: #17172B; --muted: #63637A; --faint: #9A9AAE;
+    --line: #E5E5EE; --line-strong: #D2D2DF;
+    --accent: #4F46E5; --accent-ink: #3730A3; --accent-soft: #EEF0FE;
+    --good: #15803D; --good-soft: #E7F4EC;
+    --warn: #B45309; --warn-soft: #FBF0E2;
+    --bad: #BE123C;  --bad-soft: #FBE7EC;
+    --shadow: 0 1px 2px rgba(23,23,43,.05), 0 8px 30px rgba(23,23,43,.09);
+    --radius: 16px;
+    --fs-display: 'Sora', system-ui, sans-serif;
+    --fs-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --fs-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  :root:not([data-theme="light"]) { @media (prefers-color-scheme: dark) {
+    --ground: #060610; --surface: #17172A; --surface-2: #1E1E36;
+    --ink: #ECECF5; --muted: #9C9CBA; --faint: #6E6E8C;
+    --line: #292944; --line-strong: #38385A;
+    --accent: #8B85FF; --accent-ink: #B6B2FF; --accent-soft: #22223E;
+    --good: #4ADE80; --good-soft: #15321F; --warn: #FBBF24; --warn-soft: #33260C; --bad: #FB7185; --bad-soft: #351019;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 34px rgba(0,0,0,.5);
+  } }
+  :root[data-theme="dark"] {
+    --ground: #060610; --surface: #17172A; --surface-2: #1E1E36;
+    --ink: #ECECF5; --muted: #9C9CBA; --faint: #6E6E8C;
+    --line: #292944; --line-strong: #38385A;
+    --accent: #8B85FF; --accent-ink: #B6B2FF; --accent-soft: #22223E;
+    --good: #4ADE80; --good-soft: #15321F; --warn: #FBBF24; --warn-soft: #33260C; --bad: #FB7185; --bad-soft: #351019;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 34px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--fs-body);
+    font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh;
+    padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  h1,h2,h3,h4 { font-family: var(--fs-display); text-wrap: balance; margin: 0; }
+  button { font-family: var(--fs-body); cursor: pointer; }
+  input, select, textarea { font-family: var(--fs-body); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .caption { font-size: 12px; color: var(--faint); text-align: center; max-width: 430px; }
+  .caption b { color: var(--muted); font-weight: 600; }
+
+  .device { width: 100%; max-width: 430px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 30px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column;
+    min-height: 740px; position: relative; }
+
+  .appbar { display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; z-index: 5; }
+  .appbar .ttl { font-family: var(--fs-display); font-weight: 700; font-size: 20px; flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appbar .sub { font-size: 12px; color: var(--muted); font-weight: 400; font-family: var(--fs-body); }
+  .iconbtn { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; background: var(--surface-2);
+    border: 1px solid var(--line); color: var(--ink); font-size: 17px; display: grid; place-items: center; }
+  .iconbtn:hover { background: var(--accent-soft); color: var(--accent-ink); }
+  .iconbtn.plain { background: none; border: none; font-size: 22px; }
+
+  .screen { padding: 16px; overflow-y: auto; flex: 1; }
+
+  .kbadge { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; margin-bottom: 12px; }
+  .kbadge b { color: var(--good); font-weight: 600; }
+  .sample-banner { font-size: 12px; color: var(--muted); padding: 9px 12px; margin-bottom: 12px;
+    background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 22%, transparent);
+    border-radius: 11px; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .sample-banner button { background: none; border: none; color: var(--accent-ink); font-weight: 600; font-size: 12px; }
+
+  .importbtn { width: 100%; margin-bottom: 14px; padding: 13px; border-radius: 13px; border: none;
+    background: var(--accent); color: #fff; font-weight: 600; font-size: 14.5px;
+    display: flex; align-items: center; justify-content: center; gap: 9px; }
+  .importbtn:hover { filter: brightness(1.07); }
+
+  .ccard { width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px; display: grid; grid-template-columns: 5px 1fr auto; gap: 13px;
+    align-items: center; margin-bottom: 10px; color: var(--ink); }
+  .ccard:hover { border-color: var(--line-strong); background: var(--surface-2); }
+  .cbar { width: 5px; align-self: stretch; border-radius: 4px; min-height: 44px; }
+  .cinfo { min-width: 0; }
+  .cinfo b { font-family: var(--fs-display); font-weight: 600; font-size: 15px; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cinfo .meta { font-size: 12px; color: var(--muted); display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+  .src { font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px;
+    border-radius: 5px; background: var(--accent-soft); color: var(--accent-ink); }
+  .gpill { text-align: right; }
+  .gpill .pct { font-family: var(--fs-mono); font-weight: 600; font-size: 18px; font-variant-numeric: tabular-nums; display: block; }
+  .ltr { font-family: var(--fs-display); font-weight: 700; font-size: 11.5px; padding: 1px 7px; border-radius: 6px; }
+  .ltr.g { background: var(--good-soft); color: var(--good); }
+  .ltr.w { background: var(--warn-soft); color: var(--warn); }
+  .ltr.b { background: var(--bad-soft); color: var(--bad); }
+  .ltr.na { background: var(--surface-2); color: var(--faint); }
+
+  .addclass { width: 100%; margin-top: 4px; padding: 12px; border-radius: 13px; border: 1.5px dashed var(--line-strong);
+    background: none; color: var(--muted); font-weight: 600; font-size: 13.5px;
+    display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .addclass:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+  .empty { padding: 46px 20px; text-align: center; color: var(--muted); }
+  .empty .big { font-size: 38px; display: block; margin-bottom: 10px; opacity: .55; }
+
+  .overall { background: linear-gradient(135deg, var(--accent), #7C6BF5); color: #fff; border-radius: 16px;
+    padding: 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .overall .lbl { font-size: 11px; opacity: .85; text-transform: uppercase; letter-spacing: .07em; }
+  .overall .big { font-family: var(--fs-mono); font-weight: 600; font-size: 32px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .overall .teach { font-size: 12px; opacity: .9; margin-top: 3px; }
+  .overall .rl { font-family: var(--fs-display); font-weight: 700; font-size: 24px; background: rgba(255,255,255,.2);
+    border-radius: 12px; padding: 8px 13px; }
+  .periodtag { font-size: 12px; color: var(--muted); margin: 0 2px 10px; display: flex; align-items: center; gap: 6px; }
+  .periodtag b { color: var(--ink); font-weight: 600; }
+
+  .section { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 12px; overflow: hidden; }
+  .sechead { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); gap: 10px; }
+  .sechead .nm { font-family: var(--fs-display); font-weight: 600; font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sechead .rt { display: flex; align-items: center; gap: 8px; font-size: 12.5px; flex-shrink: 0; }
+  .sechead .wt { color: var(--muted); font-family: var(--fs-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .sechead .sp { font-family: var(--fs-mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .asg { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13px; gap: 10px; }
+  .asg .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .asg .pts { font-family: var(--fs-mono); font-variant-numeric: tabular-nums; color: var(--muted); flex-shrink: 0; }
+  .asg.graded .pts b { color: var(--good); font-weight: 600; }
+  .asg.new { background: var(--accent-soft); }
+  .asg.new .nm::after { content: 'added'; font-size: 9px; color: #fff; background: var(--accent); padding: 1px 6px; border-radius: 5px; margin-left: 7px; font-family: var(--fs-body); }
+  .addphoto { width: 100%; border: none; border-top: 1px dashed var(--line-strong); background: none;
+    color: var(--accent-ink); font-weight: 600; font-size: 12.5px; padding: 11px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .addphoto:hover { background: var(--accent-soft); }
+  .addsec { width: 100%; margin-top: 2px; padding: 11px; border-radius: 12px; border: 1.5px dashed var(--line-strong);
+    background: none; color: var(--muted); font-weight: 600; font-size: 12.5px; }
+  .addsec:hover { border-color: var(--accent); color: var(--accent-ink); }
+
+  .setgroup { margin-bottom: 18px; }
+  .setgroup > h3 { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--accent-ink); margin: 0 2px 8px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card p.lead { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  label.fl { display: block; font-size: 12.5px; font-weight: 600; margin: 0 0 6px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 7px 0 0; }
+  input[type=text], input[type=url], input[type=number], textarea, select {
+    width: 100%; font-size: 14px; color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--line-strong); border-radius: 10px; padding: 9px 11px; }
+  select:disabled { opacity: .5; }
+  textarea { resize: vertical; line-height: 1.45; font-family: var(--fs-mono); font-size: 12px; }
+  .btn { background: var(--accent); color: #fff; border: none; padding: 10px 15px; border-radius: 10px;
+    font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .btn:hover { filter: brightness(1.07); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+  .btn.ghost { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line-strong); }
+  .btn.sm { padding: 8px 12px; font-size: 13px; }
+  .btn.block { width: 100%; justify-content: center; }
+  .btnrow { display: flex; gap: 9px; margin-top: 12px; flex-wrap: wrap; }
+
+  .steps { padding: 12px 14px; background: var(--accent-soft); border-radius: 11px; margin-bottom: 14px; }
+  .steps h4 { font-size: 12.5px; color: var(--accent-ink); margin: 0 0 7px; }
+  .steps ol { margin: 0; padding-left: 17px; font-size: 12.5px; }
+  .steps ol li { margin: 3px 0; }
+  .steps code { font-size: 11px; word-break: break-all; }
+  .webcal { margin-top: 12px; font-family: var(--fs-mono); font-size: 11.5px; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 9px; padding: 10px; word-break: break-all; color: var(--good); }
+  .agenda { display: flex; flex-direction: column; margin-top: 12px; }
+  .ev { display: grid; grid-template-columns: 46px 1fr; gap: 11px; padding: 9px 4px; align-items: center; border-top: 1px solid var(--line); }
+  .ev:first-child { border-top: none; }
+  .ev .date { text-align: center; border-radius: 9px; padding: 4px 0; background: var(--accent-soft); color: var(--accent-ink); }
+  .ev .date .d { font-family: var(--fs-display); font-weight: 700; font-size: 16px; line-height: 1; }
+  .ev .date .m { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; }
+  .ev .info b { font-weight: 600; font-size: 13px; } .ev .info span { display: block; font-size: 11.5px; color: var(--muted); }
+  .seg { display: flex; gap: 6px; }
+  .seg button { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink); font-size: 13px; font-weight: 500; }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .overlay { position: absolute; inset: 0; background: rgba(10,10,20,.5); display: none; align-items: flex-end; justify-content: center; z-index: 30; }
+  .overlay.show { display: flex; }
+  .sheet { width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 18px 16px 20px; max-height: 94%; overflow-y: auto; }
+  .sheet .grab { width: 38px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 14px; }
+  .sheet h3 { font-size: 17px; margin-bottom: 3px; }
+  .sheet .crumb { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .sheet .crumb b { color: var(--accent-ink); }
+
+  .scenbtns { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .scenbtn { text-align: left; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 11px; padding: 11px 13px; color: var(--ink); }
+  .scenbtn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .scenbtn b { font-size: 13.5px; display: block; }
+  .scenbtn span { font-size: 11.5px; color: var(--muted); }
+
+  .drop { border: 1.5px dashed var(--line-strong); border-radius: 12px; padding: 16px; text-align: center; color: var(--muted); background: var(--surface-2); }
+  .drop.hot { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+  .drop .big { font-size: 22px; display: block; margin-bottom: 4px; } .drop b { color: var(--ink); }
+  .ocrbox { font-family: var(--fs-mono); font-size: 11px; white-space: pre-wrap; background: #0E0E1A; color: #C8C8E0;
+    border-radius: 10px; padding: 12px; margin: 12px 0 0; border: 1px solid var(--line); }
+  .ocrbox .hd { color: #9B8BFF; } .ocrbox .cut { color: #E0526A; }
+
+  .field { margin-top: 14px; }
+  .flabel { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .flabel .n { font-size: 12.5px; font-weight: 600; }
+  .status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .status.ok { color: var(--good); background: var(--good-soft); }
+  .status.need { color: var(--warn); background: var(--warn-soft); }
+  .locked { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 14px; font-weight: 500; }
+
+  .ohead { display: grid; grid-template-columns: 1fr 56px 10px 56px 28px; gap: 5px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--faint); font-weight: 600; margin-top: 14px; }
+  .orow { display: grid; grid-template-columns: 1fr 56px 10px 56px 28px; gap: 5px; align-items: center; margin-top: 7px; }
+  .orow input { padding: 8px 8px; font-size: 13px; }
+  .orow .num { text-align: center; font-family: var(--fs-mono); }
+  .orow .slash { text-align: center; color: var(--muted); }
+  .orow .del { background: none; border: none; color: var(--faint); font-size: 17px; }
+  .orow .del:hover { color: var(--bad); }
+  .addrow { background: none; border: none; color: var(--accent-ink); font-weight: 600; font-size: 12.5px; margin-top: 8px; padding: 4px 0; }
+  .newclass-in { margin-top: 8px; }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink);
+    color: var(--ground); padding: 11px 18px; border-radius: 11px; font-size: 13.5px; font-weight: 500;
+    box-shadow: var(--shadow); opacity: 0; transition: .25s; pointer-events: none; z-index: 60; max-width: 90%; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast b { color: #8B85FF; }
+</style>
+
+<div class="device">
+  <div class="appbar" id="appbar"></div>
+  <div class="screen" id="screen"></div>
+  <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+</div>
+<p class="caption">Bessy demo · real Schoology structure. Screenshot import <b>auto-sorts to a class, then a category</b>; you fill in only what it can't read. Calendar &amp; report import live in <b>Settings</b>.</p>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   GradeEngine — two-level weighting (category → period → course)
+   Mirrors lib/domain/grade_engine.dart, extended to roll up periods.
+   ===================================================================== */
+const SCALE = [[0.97,'A+'],[0.93,'A'],[0.90,'A-'],[0.87,'B+'],[0.83,'B'],[0.80,'B-'],
+               [0.77,'C+'],[0.73,'C'],[0.70,'C-'],[0.67,'D+'],[0.63,'D'],[0.60,'D-'],[0,'F']];
+const letterFor = p => (SCALE.find(b => p >= b[0]) || SCALE[SCALE.length-1])[1];
+const isGraded = a => a.earned != null && !a.excused;
+function categoryPercent(cat){ const g=cat.assignments.filter(isGraded); if(!g.length)return null;
+  let e=0,m=0; for(const a of g){e+=a.earned;m+=a.maxPoints;} return m===0?null:e/m; }
+function pooled(asg){ let e=0,m=0,any=false; for(const a of asg.filter(isGraded)){any=true;e+=a.earned;m+=a.maxPoints;} return (!any||m===0)?null:e/m; }
+function periodPercent(pd){
+  const weighted = pd.categories.some(c=>c.weight>0);
+  if(!weighted) return pooled(pd.categories.flatMap(c=>c.assignments));
+  let ws=0,wt=0; for(const c of pd.categories){const p=categoryPercent(c); if(p==null)continue; ws+=c.weight*p; wt+=c.weight;}
+  return wt===0 ? pooled(pd.categories.flatMap(c=>c.assignments)) : ws/wt;
+}
+function coursePercent(c){
+  const pds = c.periods||[];
+  const weighted = pds.some(p=>p.weight>0);
+  if(!weighted){ // single/equal periods: average the ones that have a grade
+    const vals=pds.map(periodPercent).filter(v=>v!=null); return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null; }
+  let ws=0,wt=0; for(const p of pds){const v=periodPercent(p); if(v==null)continue; ws+=p.weight*v; wt+=p.weight;}
+  return wt===0?null:ws/wt;
+}
+const curPeriod = c => (c.periods&&c.periods[0]) || null;
+
+/* =====================================================================
+   Store + real sample data (from thkim's actual Schoology grade report)
+   ===================================================================== */
+const COLORS = [0x4F46E5,0x0EA5E9,0x059669,0xDB2777,0xD97706,0x7C3AED,0x0891B2,0xC026D3];
+let store = [], isSample = false, justAdded = new Set();
+const uid = () => Math.random().toString(36).slice(2,9);
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => Number.isInteger(n)?n:+Number(n).toFixed(1);
+const gradeClass = p => p>=0.895?'g':p>=0.795?'w':'b';
+const colHex = c => '#'+(c ?? 0x4F46E5).toString(16).padStart(6,'0');
+const courseById = id => store.find(c=>c.id===id);
+
+// American Heritage grading scheme (Formative / Summative buckets)
+const STD_CATS = [['Form: HW/CW/Part.',0.10],['Form: QZ/Short Es/Lab',0.30],['Sum: Test/Proj/Essay',0.60]];
+const stdCats = () => STD_CATS.map(([t,w])=>({title:t,weight:w,assignments:[]}));
+const g = (title,earned,max)=>({title,earned,maxPoints:max,excused:false});
+const u = (title,max=10)=>({title,earned:null,maxPoints:max,excused:false});
+
+function addCourse(c){
+  c.id = c.id || uid();
+  c.color = c.color != null ? c.color : COLORS[store.length % COLORS.length];
+  const i = store.findIndex(x=>x.title.toLowerCase()===c.title.toLowerCase());
+  if(i>=0){ store[i]={...c,color:store[i].color,id:store[i].id}; return store[i]; }
+  store.push(c); return c;
+}
+
+function sampleCourses(){
+  return [
+    { title:'Calculus BC AP', section:'P5', source:'HTML', periods:[
+      { name:'Quarter 1', weight:0.25, categories:[
+        { title:'Form: HW/CW/Part.', weight:0.10, assignments:[
+          g('HW: Signature Page',100,100),
+          u('HW: 8.1 Basic Integration Rules'), u('HW: 8.2 Integration by Parts'),
+          u('HW: 8.3 Trigonometric Integrals'), u('HW: 8.4 Trigonometric Substitution'),
+          u('HW: 8.5 Partial Fractions'), u('HW: 8.6 Numerical integration'), u('HW 8.8 Improper Integrals') ]},
+        { title:'Form: QZ/Short Es/Lab', weight:0.30, assignments:[ u('Quiz Sections 8.1-8.3',20) ]},
+        { title:'Sum: Test/Proj/Essay', weight:0.60, assignments:[] } ]} ] },
+    { title:'Application Innovation HON', section:'11840007/01', source:'HTML', periods:[
+      { name:'Quarter 1', weight:0.50, categories:[
+        { title:'Form: HW/CW/Part.', weight:0.20, assignments:[
+          u('App Ideation - 10 Ideas'), u('Competitive Market Analysis for PRIMARY APP IDEA'),
+          u('Course Syllabus'), u('Target Market Analysis') ]},
+        { title:'Form: QZ/Short Es/Lab', weight:0.30, assignments:[] },
+        { title:'Sum: Test/Proj/Essay', weight:0.50, assignments:[] } ]} ] },
+    { title:'Multivariable Calculus HH', section:'11450054/01', source:'HTML', periods:[{name:'Quarter 1',weight:0.25,categories:stdCats()}] },
+    { title:'Physics C: Elect & Mag AP', section:'Period 4', source:'HTML', periods:[{name:'Quarter 1',weight:0.25,categories:stdCats()}] },
+    { title:'English Lit & Comp AP', section:'Period 1', source:'HTML', periods:[{name:'Quarter 1',weight:0.25,categories:stdCats()}] },
+    { title:'Spanish Language&Culture AP', section:'P6', source:'HTML', periods:[{name:'Quarter 1',weight:0.25,categories:stdCats()}] },
+  ];
+}
+
+/* =====================================================================
+   Router
+   ===================================================================== */
+let screen='grades', courseId=null;
+function nav(s,id){ screen=s; if(id!==undefined)courseId=id; render(); $('#screen').scrollTop=0; }
+function render(){ if(screen==='grades')renderGrades(); else if(screen==='course')renderCourse(); else if(screen==='settings')renderSettings(); }
+function setBar(h){ $('#appbar').innerHTML=h; }
+
+/* ---- Grades home ---- */
+function renderGrades(){
+  setBar(`<div class="ttl">Grades <span class="sub">· ${store.length} class${store.length===1?'':'es'}</span></div>
+    <button class="iconbtn" data-act="settings" title="Settings" aria-label="Settings">⚙</button>`);
+  let h = `<div class="kbadge">🔓 <b>Keyless</b> · your own data, on your device</div>`;
+  if(isSample && store.length) h += `<div class="sample-banner"><span>Your real classes, loaded as the demo's sample.</span><button data-act="clear-sample">Clear</button></div>`;
+  h += `<button class="importbtn" data-act="import">📸 Import from a screenshot</button>`;
+  if(!store.length){ h += `<div class="empty"><span class="big">🎒</span>No classes yet.<br>Import a screenshot, or add a class below.</div>`; }
+  else h += store.map(c=>{
+    const p=coursePercent(c), has=p!=null;
+    return `<button class="ccard" data-act="open" data-id="${c.id}">
+      <span class="cbar" style="background:${colHex(c.color)}"></span>
+      <span class="cinfo"><b>${esc(c.title)}</b>
+        <span class="meta"><span class="src">${c.source}</span>${c.section?esc(c.section):''}</span></span>
+      <span class="gpill"><span class="pct">${has?(p*100).toFixed(1)+'%':'N/A'}</span>${has?`<span class="ltr ${gradeClass(p)}">${letterFor(p)}</span>`:'<span class="ltr na">no grade</span>'}</span>
+    </button>`;
+  }).join('');
+  h += `<button class="addclass" data-act="new-class">＋ New class</button>`;
+  $('#screen').innerHTML = h;
+}
+
+/* ---- Course detail ---- */
+function renderCourse(){
+  const c=courseById(courseId); if(!c) return nav('grades');
+  const pd=curPeriod(c);
+  setBar(`<button class="iconbtn plain" data-act="back" aria-label="Back">‹</button><div class="ttl">${esc(c.title)}</div>`);
+  const p=coursePercent(c), has=p!=null;
+  let h=`<div class="overall"><div><div class="lbl">Course grade</div><div class="big">${has?(p*100).toFixed(1)+'%':'N/A'}</div>
+      <div class="teach">${c.section?esc(c.section)+' · ':''}Schoology weighted</div></div>
+    ${has?`<div class="rl">${letterFor(p)}</div>`:''}</div>`;
+  if(pd) h+=`<div class="periodtag">📅 Showing <b>${esc(pd.name)}</b> · counts ${Math.round(pd.weight*100)}% of the course</div>`;
+  (pd?pd.categories:[]).forEach((cat,ci)=>{
+    const cp=categoryPercent(cat);
+    const rows=cat.assignments.map(a=>{
+      const key=c.id+'|'+cat.title+'|'+a.title;
+      const graded=isGraded(a);
+      const pts=a.excused?'Excused':graded?`<b>${fmt(a.earned)}</b> / ${fmt(a.maxPoints)}`:'—';
+      return `<div class="asg ${graded?'graded':''} ${justAdded.has(key)?'new':''}"><span class="nm">${esc(a.title)}</span><span class="pts">${pts}</span></div>`;
+    }).join('') || `<div class="asg"><span class="nm" style="color:var(--faint)">No items yet</span><span></span></div>`;
+    h+=`<div class="section"><div class="sechead"><span class="nm">${esc(cat.title)}</span>
+      <span class="rt"><span class="wt">${Math.round(cat.weight*100)}%</span><span class="sp">${cp==null?'—':(cp*100).toFixed(0)+'%'}</span></span></div>
+      ${rows}<button class="addphoto" data-act="add-photo" data-id="${c.id}" data-cat="${ci}">📸 Add from photo</button></div>`;
+  });
+  h+=`<button class="addsec" data-act="add-section" data-id="${c.id}">＋ Add section</button>`;
+  $('#screen').innerHTML=h;
+}
+
+/* ---- Settings ---- */
+function renderSettings(){
+  setBar(`<button class="iconbtn plain" data-act="back-home" aria-label="Back">‹</button><div class="ttl">Settings</div>`);
+  $('#screen').innerHTML = `
+    <div class="setgroup"><h3>Import grades</h3><div class="card">
+      <p class="lead">On a computer, open Schoology's <b>Grades</b> page and save it (Ctrl/⌘+S) or use <b>Download Student Report → Print → Save as PDF/HTML</b>, then bring the file here for an exact, no-OCR import of every class.</p>
+      <div class="drop" id="htmlDrop"><span class="big">📄</span><b>Drop the saved .html</b> — or tap to choose
+        <input type="file" id="htmlFile" accept=".html,.htm,text/html" hidden /></div>
+      <label class="fl" for="htmlText" style="margin-top:12px">…or paste the page source</label>
+      <textarea id="htmlText" rows="3" placeholder="Paste Grades page HTML"></textarea>
+      <div class="btnrow"><button class="btn ghost sm" id="htmlSample">Load sample</button><button class="btn sm" id="htmlParse">Parse &amp; import</button></div>
+      <p class="hint" id="htmlStatus">On your iPhone the report is a <i>printable page</i>, not a file — so on mobile, use 📸 screenshot import instead.</p>
+    </div></div>
+
+    <div class="setgroup"><h3>Calendar</h3><div class="card">
+      <p class="lead">Subscribe to your Schoology calendar for school &amp; club events. Heads-up: at American Heritage this feed carries events, not assignment due dates.</p>
+      <div class="steps"><h4>Where to find your feed link</h4><ol>
+        <li>Schoology (web) → click your name → <b>Settings</b></li>
+        <li>Copy the <b>iCal / calendar feed</b> link</li>
+        <li>It starts with <code>webcal://&lt;school&gt;.schoology.com/calendar/feed/ical/&lt;id&gt;/&lt;token&gt;/ical.ics</code></li></ol></div>
+      <label class="fl" for="icalUrl">iCal feed URL</label>
+      <input type="text" id="icalUrl" placeholder="webcal://ahschool.schoology.com/calendar/feed/ical/&lt;id&gt;/&lt;token&gt;/ical.ics" />
+      <div class="btnrow"><button class="btn sm" id="icalSub">Subscribe</button></div>
+      <p class="hint">🔒 That link holds a private token — stored in your device keychain, like a password.</p>
+      <div class="webcal" id="webcalOut" hidden></div>
+      <label class="fl" for="icsText" style="margin-top:16px">Preview a sample <code>.ics</code></label>
+      <textarea id="icsText" rows="3" placeholder="Paste .ics contents"></textarea>
+      <div class="btnrow"><button class="btn ghost sm" id="icsSample">Load sample</button><button class="btn sm" id="icsParse">Parse events</button></div>
+      <div class="agenda" id="agenda"></div>
+    </div></div>
+
+    <div class="setgroup"><h3>Appearance</h3><div class="card">
+      <label class="fl">Theme</label>
+      <div class="seg" id="themeSeg"><button data-theme-val="" aria-pressed="false">System</button>
+        <button data-theme-val="light" aria-pressed="false">Light</button>
+        <button data-theme-val="dark" aria-pressed="false">Dark</button></div>
+    </div></div>
+
+    <div class="setgroup"><h3>Data</h3><div class="card">
+      <button class="btn ghost block" data-act="reset">Reset demo to sample data</button></div></div>`;
+  wireSettings();
+}
+
+/* =====================================================================
+   Screenshot cascade: OCR → auto-sort class → auto-sort category → manual fallback
+   ===================================================================== */
+// simulated OCR text for three real-shaped screenshots
+const SHOTS = {
+  full: { label:'Full crop', desc:'Course title + Form/Sub header both visible',
+    text:['Calculus BC AP: P5','Form: HW/CW/Part. (10%)','HW: 8.1 Basic Integration Rules  9/01/26 11:59pm  10 / 10'] },
+  nocat: { label:'Category cut off', desc:'Course visible, the Form/Sum heading scrolled away',
+    text:['Calculus BC AP: P5','HW: 8.2 Integration by Parts  9/02/26 11:59pm  9 / 10'] },
+  noclass: { label:'Zoomed in — no class or heading', desc:'Just the rows; class & heading off-screen',
+    text:['Quiz Sections 8.1-8.3  9/09/26  18 / 20'] },
+  spanish: { label:'Spanish HW — full section (your real shot)', desc:'Course + Form/CW header + a dozen items, incl. long Spanish names',
+    text:[
+      'Spanish Language&Culture AP: P6',
+      'Quarter 1: 2026-08-26 - 2026-10-16 (25%) 87.8%',
+      'Form: HW/CW/Part. (20%) 95%',
+      'Honor Code & Spanish 2H Syllabus Acknowledgment  8/26/26 11:59pm  100 / 100',
+      'W1CWQ1 # 1 - Actividad de Discusión # 1 - Terminar p.1  8/28/26 11:59pm  —',
+      'W1Q1 Participación  8/28/26 11:59pm  100 / 100',
+      'W1CWQ1 # 2 - Actividad para conocernos - Documento  8/30/26 11:59pm  —',
+      'W2CWQ1 # 3 - Video-Presentación # 1: Presentándome (Grabación)  8/30/26 11:59pm  —',
+      'W2CWQ1 # 4 - Notas: Familias modernas  9/02/26 11:59pm  —',
+      'W2CWQ1 # 5 - Formative # 1 - Comprensión de Lectura y Auditiva (Formative)  9/02/26 11:59pm  80 / 100',
+      'W2Q1 Participación  9/04/26 11:59pm  100 / 100',
+      'W3CWQ1 # 6 - Análisis Literario # 1: "Las medias rojas", Emilia Pardo Bazán - Notas  9/04/26 11:59pm  —',
+      'Trabajo en grupos: El machismo en la industria musical  9/08/26 11:59pm  —',
+      'W3CWQ1 # 10 - Formative # 3 - Práctica de Comprensión (Formative)  9/10/26 11:59pm  —',
+    ] },
+};
+
+// detection (genuine logic, runs on whatever OCR lines are given)
+const DATE_RE = /\d{1,2}\/\d{1,2}\/\d{2,4}(\s+\d{1,2}:\d{2}\s*[ap]m)?/i;
+const SCORE_RE = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/;
+const CATLINE_RE = /^(form:?|sum:?)/i;
+function detectClassId(lines){
+  for(const l of lines){ const t=l.toLowerCase();
+    for(const c of store){ const nm=c.title.toLowerCase(); const head=nm.split(':')[0].trim();
+      if(t.includes(nm) || (head.length>4 && t.includes(head))) return c.id; } }
+  return null;
+}
+function detectCatIdx(course, lines){
+  if(!course) return -1; const cats=curPeriod(course).categories;
+  for(const l of lines){ const t=l.toLowerCase();
+    for(let i=0;i<cats.length;i++){ if(t.includes(cats[i].title.toLowerCase())) return i; } }
+  // partial: a bare "Form:"/"Sum:" hint is ambiguous → treat as not-detected
+  return -1;
+}
+function extractRows(lines){
+  const rows=[];
+  for(let l of lines){
+    if(CATLINE_RE.test(l.trim())) continue;               // category header
+    const scored = l.match(SCORE_RE);
+    let rest = l.replace(SCORE_RE,'').replace(DATE_RE,'').trim();
+    if(scored){ if(rest) rows.push({title:rest, earned:+scored[1], maxPoints:+scored[2]}); }
+    else {
+      const clean=l.replace(DATE_RE,'').replace(/[—-]\s*$/,'').trim();
+      // skip lines that look like a course title (contain ':' + short) or empty
+      if(clean && !/^(form:?|sum:?)/i.test(clean) && !isProbablyClass(clean)) rows.push({title:clean, earned:'', maxPoints:''});
+    }
+  }
+  return rows;
+}
+function isProbablyClass(t){ const tl=t.toLowerCase(); return store.some(c=>tl.includes(c.title.toLowerCase())); }
+
+/* sheet state */
+let sheet = null; // {mode, classId, catIdx, rows, detClass, detCat}
+function openImport(){
+  sheet = { mode:'global', classId:null, catIdx:-1, rows:[], detClass:false, detCat:false };
+  $('#sheet').innerHTML = `<div class="grab"></div>
+    <h3>Import from a screenshot</h3>
+    <div class="crumb">Bessy reads the shot, then auto-files it. Pick a sample to see each case:</div>
+    <div class="scenbtns">
+      ${Object.entries(SHOTS).map(([k,s])=>`<button class="scenbtn" data-shot="${k}"><b>${esc(s.label)}</b><span>${esc(s.desc)}</span></button>`).join('')}
+    </div>
+    <div class="drop" id="shotDrop"><span class="big">📸</span><b>…or drop your own screenshot</b>
+      <input type="file" id="shotFile" accept="image/*" capture="environment" hidden /></div>`;
+  $('#overlay').classList.add('show');
+  $('#sheet').querySelectorAll('[data-shot]').forEach(b=>b.addEventListener('click',()=>runOcr(SHOTS[b.dataset.shot].text)));
+  setupDrop('#shotDrop','#shotFile',()=>runOcr(SHOTS.full.text)); // demo: any upload → sample OCR
+}
+function runOcr(lines){
+  const classId = detectClassId(lines);
+  const course = classId?courseById(classId):null;
+  const catIdx = detectCatIdx(course, lines);
+  sheet = { mode:'global', classId, catIdx, rows:extractRows(lines), detClass:!!classId, detCat:catIdx>=0, ocr:lines };
+  renderResolve();
+}
+function openAddPhoto(id,ci){
+  sheet = { mode:'section', classId:id, catIdx:ci, rows:[], detClass:true, detCat:true, locked:true };
+  renderResolve(); $('#overlay').classList.add('show');
+}
+
+function renderResolve(){
+  const course = sheet.classId?courseById(sheet.classId):null;
+  const cats = course?curPeriod(course).categories:[];
+  const locked = sheet.locked;
+  let h = `<div class="grab"></div><h3>${sheet.mode==='section'?'Add from photo':'File this screenshot'}</h3>`;
+
+  if(sheet.ocr) h += `<div class="ocrbox">${sheet.ocr.map(l=>CATLINE_RE.test(l.trim())||isProbablyClass(l)?`<span class="hd">${esc(l)}</span>`:esc(l)).join('\n')}</div>`;
+
+  // CLASS field
+  const clsStatus = sheet.detClass?'<span class="status ok">✓ auto-detected</span>'
+    : sheet.manualClass?'<span class="status ok">✓ set</span>':'<span class="status need">⚠ pick one</span>';
+  h += `<div class="field"><div class="flabel"><span class="n">Class</span>${locked?'':clsStatus}</div>`;
+  if(locked){ h += `<div class="locked">${esc(course.title)}</div>`; }
+  else {
+    h += `<select id="rvClass"><option value="">— choose a class —</option>
+      ${store.map(c=>`<option value="${c.id}" ${c.id===sheet.classId?'selected':''}>${esc(c.title)}</option>`).join('')}
+      <option value="__new">＋ New class…</option></select>
+      <input type="text" id="rvClassNew" class="newclass-in" placeholder="New class name" style="display:none" />`;
+  }
+  h += `</div>`;
+
+  // CATEGORY field
+  const catStatus = sheet.detCat?'<span class="status ok">✓ auto-detected</span>'
+    : sheet.manualCat?'<span class="status ok">✓ set</span>':'<span class="status need">⚠ pick one</span>';
+  h += `<div class="field"><div class="flabel"><span class="n">Section</span>${locked||!sheet.classId?'':catStatus}</div>`;
+  if(locked){ h += `<div class="locked">${esc(cats[sheet.catIdx].title)}</div>`; }
+  else {
+    h += `<select id="rvCat" ${sheet.classId?'':'disabled'}>
+      <option value="">${sheet.classId?'— choose a section —':'choose a class first'}</option>
+      ${cats.map((c,i)=>`<option value="${i}" ${i===sheet.catIdx?'selected':''}>${esc(c.title)}</option>`).join('')}
+    </select>`;
+  }
+  h += `</div>`;
+
+  // ROWS
+  h += `<div class="ohead"><span>Assignment</span><span class="num">Score</span><span></span><span class="num">Out of</span><span></span></div><div id="rows">`;
+  const rows = sheet.rows.length?sheet.rows:[{title:'',earned:'',maxPoints:''}];
+  h += rows.map(r=>ocrRowHtml(r.title,r.earned,r.maxPoints)).join('');
+  h += `</div><button class="addrow" id="addRow">＋ Add another item</button>
+    <button class="btn block" id="commit" style="margin-top:14px">Add to gradebook</button>`;
+  $('#sheet').innerHTML = h;
+  wireResolve();
+}
+function ocrRowHtml(name='',earned='',max=''){
+  return `<div class="orow"><input type="text" class="onm" value="${esc(name)}" placeholder="Assignment name" />
+    <input type="number" class="num oe" value="${earned}" placeholder="—" /><span class="slash">/</span>
+    <input type="number" class="num om" value="${max}" placeholder="—" />
+    <button class="del" aria-label="Remove">×</button></div>`;
+}
+function wireResolve(){
+  const clsSel=$('#rvClass');
+  if(clsSel) clsSel.addEventListener('change',()=>{
+    sheet.classId = clsSel.value==='__new'?'__new':(clsSel.value||null);
+    sheet.detClass=false; sheet.manualClass=!!sheet.classId; sheet.catIdx=-1; sheet.detCat=false; sheet.manualCat=false;
+    // preserve typed rows
+    captureRows();
+    renderResolve();
+    if(clsSel.value==='__new'){ const ni=$('#rvClassNew'); ni.style.display='block'; }
+  });
+  const catSel=$('#rvCat');
+  if(catSel) catSel.addEventListener('change',()=>{ sheet.catIdx=catSel.value===''?-1:+catSel.value; sheet.detCat=false; sheet.manualCat=sheet.catIdx>=0; });
+  $('#addRow').addEventListener('click',()=>{ captureRows(); sheet.rows.push({title:'',earned:'',maxPoints:''}); renderResolve(); });
+  $('#sheet').addEventListener('click',e=>{ if(e.target.classList.contains('del')){ e.target.closest('.orow').remove(); }});
+  $('#commit').addEventListener('click',commit);
+}
+function captureRows(){
+  sheet.rows = [...$('#rows').querySelectorAll('.orow')].map(r=>({
+    title:r.querySelector('.onm').value, earned:r.querySelector('.oe').value, maxPoints:r.querySelector('.om').value }));
+}
+function commit(){
+  captureRows();
+  let course, catIdx;
+  if(sheet.mode==='section'){ course=courseById(sheet.classId); catIdx=sheet.catIdx; }
+  else {
+    if(!sheet.classId){ toast('Pick the class first'); return; }
+    if(sheet.classId==='__new'){
+      const nm=$('#rvClassNew').value.trim(); if(!nm){ toast('Name the new class'); return; }
+      course = addCourse({title:nm, section:null, source:'MANUAL', periods:[{name:'Quarter 1',weight:0.25,categories:stdCats()}]});
+      sheet.classId=course.id;
+    } else course=courseById(sheet.classId);
+    if(sheet.catIdx<0){ toast('Pick the section'); return; }
+    catIdx=sheet.catIdx;
+  }
+  const cat=curPeriod(course).categories[catIdx];
+  let added=0;
+  sheet.rows.forEach(r=>{
+    const name=(r.title||'').trim(); if(!name||r.maxPoints===''||r.maxPoints==null) return;
+    cat.assignments.push({title:name, earned:r.earned===''||r.earned==null?null:+r.earned, maxPoints:+r.maxPoints, excused:false});
+    justAdded.add(course.id+'|'+cat.title+'|'+name); added++;
+  });
+  if(!added){ toast('Enter a name and an “out of” score'); return; }
+  if(isSample) isSample=false;
+  closeSheet(); nav('course', course.id);
+  toast(`Added <b>${added}</b> item${added>1?'s':''} to ${esc(cat.title)}`);
+}
+function closeSheet(){ $('#overlay').classList.remove('show'); sheet=null; }
+
+/* ---- New class / Add section ---- */
+function openNewClass(){
+  $('#sheet').innerHTML=`<div class="grab"></div><h3>New class</h3>
+    <div class="crumb">Starts with the AH Form/Sum sections; import a report later to fill real weights.</div>
+    <label class="fl" for="ncName">Class name</label><input type="text" id="ncName" placeholder="e.g. US Government & Politics AP" />
+    <label class="fl" for="ncSec" style="margin-top:12px">Period / section (optional)</label><input type="text" id="ncSec" placeholder="e.g. Per 7" />
+    <button class="btn block" id="ncCreate" style="margin-top:16px">Create class</button>`;
+  $('#overlay').classList.add('show');
+  $('#ncCreate').addEventListener('click',()=>{ const nm=$('#ncName').value.trim(); if(!nm){toast('Name the class');return;}
+    if(isSample)isSample=false;
+    const c=addCourse({title:nm, section:$('#ncSec').value.trim()||null, source:'MANUAL', periods:[{name:'Quarter 1',weight:0.25,categories:stdCats()}]});
+    closeSheet(); nav('course',c.id); toast(`Created <b>${esc(nm)}</b>`); });
+}
+function openAddSection(id){
+  const c=courseById(id); if(!c)return;
+  $('#sheet').innerHTML=`<div class="grab"></div><h3>Add section</h3><div class="crumb"><b>${esc(c.title)}</b></div>
+    <label class="fl" for="secName">Section name</label><input type="text" id="secName" placeholder="e.g. Sum: Test/Proj/Essay" />
+    <label class="fl" for="secW" style="margin-top:12px">Weight % (optional)</label><input type="number" id="secW" placeholder="e.g. 60" />
+    <button class="btn block" id="secCreate" style="margin-top:16px">Add section</button>`;
+  $('#overlay').classList.add('show');
+  $('#secCreate').addEventListener('click',()=>{ const n=$('#secName').value.trim(); if(!n){toast('Name the section');return;}
+    const w=$('#secW').value; curPeriod(c).categories.push({title:n,weight:w===''?0:(+w)/100,assignments:[]});
+    closeSheet(); nav('course',c.id); toast(`Added <b>${esc(n)}</b>`); });
+}
+
+/* =====================================================================
+   Settings wiring: iCal + HTML import + theme  (real Schoology structure)
+   ===================================================================== */
+const SAMPLE_ICS=`BEGIN:VCALENDAR
+BEGIN:VEVENT
+SUMMARY:Club Fair
+DTSTART;VALUE=DATE:20260913
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:LS Speech Club
+DTSTART:20260918T194500Z
+DESCRIPTION:Mentors meet at Lower School Library
+END:VEVENT
+END:VCALENDAR`;
+
+const SAMPLE_HTML=`<div class="gradebook-course"><h3 class="course-title">Calculus BC AP: P5</h3>
+ <div class="grading-period" data-name="Quarter 1" data-weight="25">
+  <div class="category-row"><span class="title">Form: HW/CW/Part.</span><span class="weight">10%</span></div>
+  <div class="item-row"><span class="title">HW: Signature Page</span><span class="awarded">100</span><span class="max">100</span></div>
+  <div class="item-row"><span class="title">HW: 8.1 Basic Integration Rules</span><span class="grade">—</span></div>
+  <div class="category-row"><span class="title">Form: QZ/Short Es/Lab</span><span class="weight">30%</span></div>
+  <div class="item-row"><span class="title">Quiz Sections 8.1-8.3</span><span class="grade">—</span></div>
+  <div class="category-row"><span class="title">Sum: Test/Proj/Essay</span><span class="weight">60%</span></div>
+ </div></div>`;
+
+function pctNum(s){ const m=String(s).match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
+function parseGradeReportHtml(html){
+  const doc=new DOMParser().parseFromString(html,'text/html'); const courses=[];
+  doc.querySelectorAll('.gradebook-course').forEach(ce=>{
+    const rawTitle=(ce.querySelector('.course-title')?.textContent||'Untitled').trim();
+    const {title,section}=splitTitle(rawTitle);
+    let pds=[...ce.querySelectorAll('.grading-period')];
+    if(!pds.length) pds=[ce]; // no period wrapper → single implicit period
+    const periods=pds.map(pe=>{
+      const name=pe.getAttribute?.('data-name')||'Quarter 1';
+      const w=pe.getAttribute?pctNum(pe.getAttribute('data-weight')):null;
+      const cats=[]; let cur=null;
+      pe.querySelectorAll('.category-row,.item-row').forEach(row=>{
+        if(row.classList.contains('category-row')){
+          const nm=row.querySelector('.title')?.textContent.trim()||'Category';
+          const cw=pctNum(row.querySelector('.weight')?.textContent||'');
+          cur={title:nm, weight:cw!=null?cw/100:0, assignments:[]}; cats.push(cur);
+        } else {
+          if(!cur){cur={title:'Uncategorized',weight:0,assignments:[]};cats.push(cur);}
+          const nm=row.querySelector('.title')?.textContent.trim()||'Item';
+          const gr=row.querySelector('.grade'); const ex=/excused/i.test(gr?.textContent||'');
+          const aw=pctNum(row.querySelector('.awarded')?.textContent);
+          const mx=pctNum(row.querySelector('.max')?.textContent);
+          cur.assignments.push({title:nm, earned:ex?null:aw, maxPoints:mx!=null?mx:(aw!=null?aw:10), excused:ex});
+        }
+      });
+      return {name, weight:w!=null?w/100:0.25, categories:cats};
+    });
+    courses.push({title, section, source:'HTML', periods});
+  });
+  return courses;
+}
+function splitTitle(raw){ // "Calculus BC AP: P5" / "Physics C: Elect & Mag AP: Period 4 - APC E&M" / "App..: 118.../01 - App.."
+  // strip a trailing " - duplicate"; treat last colon-chunk that looks like a period/section as section
+  let t=raw.replace(/\s*-\s*\d.*$/,'').trim();
+  const m=t.match(/^(.*):\s*([^:]+)$/);
+  if(m && /\b(p\d|period|per\b|\d{6,})/i.test(m[2])) return {title:m[1].trim(), section:m[2].trim()};
+  return {title:t, section:null};
+}
+function importHtml(html){
+  if(!html.trim()){ toast('Paste or drop a report'); return; }
+  let courses=[]; try{ courses=parseGradeReportHtml(html); }catch(e){ courses=[]; }
+  if(!courses.length){ $('#htmlStatus').textContent='No courses found — expected the Schoology Grades markup. Try “Load sample”.'; return; }
+  if(isSample){ store=[]; isSample=false; }
+  courses.forEach(addCourse);
+  $('#htmlStatus').textContent=`Imported ${courses.length} class${courses.length>1?'es':''}. See them under Grades.`;
+  toast(`Imported <b>${courses.length}</b> class${courses.length>1?'es':''}`);
+}
+function unfoldIcs(t){ return t.replace(/\r\n/g,'\n').replace(/\n[ \t]/g,''); }
+function parseIcsDate(v){ const m=v.match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?/); if(!m)return null;
+  const[,y,mo,d,h,mi]=m; return {date:new Date(+y,+mo-1,+d,+(h||0),+(mi||0)), timed:h!=null}; }
+function parseIcs(t){ const L=unfoldIcs(t).split('\n'); const ev=[]; let c=null;
+  for(const l of L){ if(l.startsWith('BEGIN:VEVENT'))c={}; else if(l.startsWith('END:VEVENT')){if(c&&c.start)ev.push(c);c=null;}
+    else if(c){const i=l.indexOf(':');if(i<0)continue;const k=l.slice(0,i).split(';')[0].toUpperCase();const v=l.slice(i+1).trim();
+      if(k==='SUMMARY')c.summary=v.replace(/\\,/g,',');else if(k==='DTSTART')c.start=parseIcsDate(v);else if(k==='LOCATION')c.location=v;}}
+  return ev.filter(e=>e.start).sort((a,b)=>a.start.date-b.start.date); }
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function wireSettings(){
+  const cur=document.documentElement.getAttribute('data-theme')||'';
+  $('#themeSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.themeVal||'')===cur)));
+  $('#themeSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; const v=b.dataset.themeVal;
+    if(v)document.documentElement.setAttribute('data-theme',v); else document.documentElement.removeAttribute('data-theme');
+    $('#themeSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); });
+  $('#icalSub').addEventListener('click',()=>{ const v=$('#icalUrl').value.trim();
+    if(!/^(webcal|https?):\/\/.+/i.test(v)||!/ical|\.ics/i.test(v)){ toast('Paste your webcal:// …/ical.ics link'); return; }
+    const w=v.replace(/^https?:\/\//i,'webcal://'); const o=$('#webcalOut'); o.hidden=false; o.textContent='✓ Subscribed: '+w; toast('Calendar <b>subscribed</b>'); });
+  $('#icsSample').addEventListener('click',()=>{ $('#icsText').value=SAMPLE_ICS; });
+  $('#icsParse').addEventListener('click',()=>{ const ev=parseIcs($('#icsText').value), a=$('#agenda');
+    if(!ev.length){ a.innerHTML='<p class="hint">No events — load the sample.</p>'; return; }
+    a.innerHTML=ev.map(e=>{const dt=e.start.date; const tm=e.start.timed?dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'All day';
+      return `<div class="ev"><div class="date"><div class="d">${dt.getDate()}</div><div class="m">${MON[dt.getMonth()]}</div></div>
+        <div class="info"><b>${esc(e.summary||'(untitled)')}</b><span>${tm}${e.location?' · '+esc(e.location):''}</span></div></div>`;}).join('');
+    toast(ev.length+' events parsed'); });
+  $('#htmlSample').addEventListener('click',()=>{ $('#htmlText').value=SAMPLE_HTML; toast('Sample loaded'); });
+  $('#htmlParse').addEventListener('click',()=>importHtml($('#htmlText').value));
+  setupDrop('#htmlDrop','#htmlFile',f=>{const r=new FileReader();r.onload=()=>{$('#htmlText').value=r.result;importHtml(r.result);};r.readAsText(f);});
+}
+
+/* =====================================================================
+   Global actions + helpers
+   ===================================================================== */
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el)return; const a=el.dataset.act;
+  if(a==='settings')nav('settings'); else if(a==='back'||a==='back-home')nav('grades');
+  else if(a==='open')nav('course',el.dataset.id);
+  else if(a==='import')openImport();
+  else if(a==='add-photo')openAddPhoto(el.dataset.id,+el.dataset.cat);
+  else if(a==='add-section')openAddSection(el.dataset.id);
+  else if(a==='new-class')openNewClass();
+  else if(a==='clear-sample'){ store=[]; isSample=false; render(); toast('Cleared'); }
+  else if(a==='reset'){ loadSampleData(); nav('grades'); toast('Reset to sample'); }
+});
+$('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay')closeSheet(); });
+function setupDrop(dropSel,inputSel,onFile){ const drop=$(dropSel),input=$(inputSel); if(!drop)return;
+  drop.addEventListener('click',()=>input.click());
+  input.addEventListener('change',()=>{ if(input.files[0])onFile(input.files[0]); });
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0]); }); }
+function toast(m){ const t=$('#toast'); t.innerHTML=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
+
+/* Boot */
+function loadSampleData(){ store=sampleCourses().map((c,i)=>({...c,id:uid(),color:COLORS[i%COLORS.length]})); isSample=true; justAdded.clear(); }
+loadSampleData();
+nav('grades');
+</script>

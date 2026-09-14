@@ -1,0 +1,22 @@
+import 'package:bessy/app.dart';
+import 'package:bessy/state/providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  testWidgets('onboarding renders the privacy promise and CTA', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        child: const BessyApp(),
+      ),
+    );
+
+    expect(find.text('Get started'), findsOneWidget);
+    expect(find.textContaining('never leave your device'), findsOneWidget);
+  });
+}

@@ -1,0 +1,327 @@
+<title>BessyV2 Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --surface-2: #eef0f7;
+    --ink: #191a25;
+    --ink-soft: #565a70;
+    --ink-faint: #878aa0;
+    --line: #d9dce8;
+    --accent: #4f46e5;
+    --accent-soft: #ecebfb;
+    --accent-ink: #3a32ad;
+    --db: #0e7c86;
+    --db-soft: #e2f2f3;
+    --db-line: #8ecbd0;
+    --built: #167a4d;
+    --built-soft: #e3f3ea;
+    --build: #a4671b;
+    --build-soft: #f7efe3;
+    --build-line: #d8b783;
+    --shadow: 0 1px 2px rgba(20,22,40,.05), 0 8px 24px rgba(20,22,40,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #13141b;
+      --surface: #1c1e29;
+      --surface-2: #23252f;
+      --ink: #e9eaf4;
+      --ink-soft: #a4a7bb;
+      --ink-faint: #767995;
+      --line: #33364a;
+      --accent: #8f88ff;
+      --accent-soft: #262353;
+      --accent-ink: #bcb6ff;
+      --db: #4fc9d3;
+      --db-soft: #103034;
+      --db-line: #2c5459;
+      --built: #4fc48a;
+      --built-soft: #14301f;
+      --build: #e0ab63;
+      --build-soft: #2c2618;
+      --build-line: #5c4a2c;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #13141b;
+    --surface: #1c1e29;
+    --surface-2: #23252f;
+    --ink: #e9eaf4;
+    --ink-soft: #a4a7bb;
+    --ink-faint: #767995;
+    --line: #33364a;
+    --accent: #8f88ff;
+    --accent-soft: #262353;
+    --accent-ink: #bcb6ff;
+    --db: #4fc9d3;
+    --db-soft: #103034;
+    --db-line: #2c5459;
+    --built: #4fc48a;
+    --built-soft: #14301f;
+    --build: #e0ab63;
+    --build-soft: #2c2618;
+    --build-line: #5c4a2c;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 72px; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink);
+  }
+  h1 {
+    font-family: "Sora", sans-serif; font-weight: 700;
+    font-size: clamp(28px, 4.4vw, 42px); line-height: 1.08; letter-spacing: -.02em;
+    margin: 8px 0 10px; text-wrap: balance;
+  }
+  .lede { font-size: 16px; color: var(--ink-soft); max-width: 70ch; margin: 0; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 22px 0 30px;
+    padding: 14px 18px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .legend .key { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-soft); }
+  .swatch { width: 26px; height: 15px; border-radius: 4px; flex: none; }
+  .swatch.tierc { background: var(--accent-soft); border: 1.5px solid var(--accent); }
+  .swatch.tiera { background: var(--surface); border: 1.5px solid var(--ink-faint); }
+  .swatch.tierd { background: var(--db-soft); border: 1.5px solid var(--db); }
+  .chip {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  .chip.built { color: var(--built); background: var(--built-soft); border: 1px solid var(--built); }
+  .chip.build { color: var(--build); background: var(--build-soft); border: 1px dashed var(--build-line); }
+
+  .zone {
+    border-radius: 16px; padding: 20px 20px 24px; background: var(--surface);
+    border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .zone.sources { background: var(--surface-2); }
+  .zone.client { border: 1.5px solid var(--accent); background: linear-gradient(180deg, var(--accent-soft) 0%, var(--surface) 48px); }
+  .zone.app { border: 1.5px solid var(--ink-faint); }
+  .zone.data { border: 1.5px solid var(--db); background: linear-gradient(180deg, var(--db-soft) 0%, var(--surface) 48px); }
+
+  .zone-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .zone-title { font-family: "Sora", sans-serif; font-weight: 600; font-size: 19px; letter-spacing: -.01em; margin: 0; }
+  .zone-tag {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 500;
+    letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+    color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line);
+  }
+  .zone-note { font-size: 13.5px; color: var(--ink-soft); margin: 2px 0 16px; max-width: 76ch; }
+
+  .grid { display: grid; gap: 12px; }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .cols-2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 720px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } }
+
+  .layer { margin-top: 12px; }
+  .layer-label {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
+    margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .layer-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .node { background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 13px 14px; }
+  .node.db { border-color: var(--db-line); background: color-mix(in srgb, var(--surface) 82%, var(--db-soft)); }
+  .node-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .node h4 { font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 600; margin: 0; color: var(--ink); letter-spacing: -.01em; }
+  .node p { font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+  .node .detail {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint);
+    margin-top: 6px; display: block; line-height: 1.6;
+  }
+
+  .seam {
+    margin-top: 14px; border: 2px solid var(--accent); border-radius: 11px;
+    background: var(--surface); padding: 12px 14px; display: flex; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .seam .badge {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    color: var(--accent-ink); background: var(--accent-soft); border-radius: 6px;
+    padding: 4px 9px; white-space: nowrap;
+  }
+  .seam p { margin: 0; font-size: 12.5px; color: var(--ink-soft); }
+
+  .sidebar-note {
+    margin-top: 12px; font-size: 12.5px; color: var(--ink-soft); padding: 11px 13px;
+    border-radius: 10px; background: var(--surface-2); border-left: 3px solid var(--ink-faint);
+  }
+  .sidebar-note b { color: var(--ink); font-weight: 600; }
+
+  .flow { display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 5px; }
+  .flow .chevron { color: var(--accent); font-size: 20px; line-height: 1; }
+  .flow .flow-label {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .04em;
+    color: var(--ink-soft); text-align: center; padding: 3px 11px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  @media (max-width: 720px) { .modes { grid-template-columns: repeat(2, 1fr); } }
+  .mode { text-align: center; padding: 12px 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+  .mode .who { font-family: "Sora", sans-serif; font-weight: 600; font-size: 13.5px; display: block; }
+  .mode .role { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; display: block; }
+
+  footer {
+    margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-faint); display: flex; gap: 8px 18px; flex-wrap: wrap;
+    font-family: "IBM Plex Mono", monospace;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BessyV2 · System Architecture</div>
+    <h1>A Flutter grades app on a three-tier cloud backend</h1>
+    <p class="lede">Grades are captured keyless on the device, then synced up to an API and stored in a PostgreSQL database — the system of record that powers cross-device sync, grade-change notifications, caregiver access, and admin/support tooling. The client is built today; the backend is what this phase builds.</p>
+  </header>
+
+  <div class="legend" aria-label="Legend">
+    <span class="key"><span class="swatch tierc"></span> Client tier</span>
+    <span class="key"><span class="swatch tiera"></span> Application / API tier</span>
+    <span class="key"><span class="swatch tierd"></span> Data tier</span>
+    <span class="key"><span class="chip built">built</span> exists today</span>
+    <span class="key"><span class="chip build">to build</span> this phase</span>
+  </div>
+
+  <!-- ZONE 1 — external sources -->
+  <section class="zone sources" aria-labelledby="z1">
+    <div class="zone-head">
+      <h2 class="zone-title" id="z1">The user's own data</h2>
+      <span class="zone-tag">External · read-only · user-initiated</span>
+    </div>
+    <p class="zone-note">Keyless: no Schoology API key, no OAuth, no stored password, no automated login. The student supplies their own data — nothing is scraped. Ingestion stays on the device; the results sync up.</p>
+    <div class="grid cols-3">
+      <div class="node"><div class="node-top"><h4>Screenshots</h4><span class="chip built">built</span></div><p>Photo of a graded item.</p><span class="detail">→ on-device OCR</span></div>
+      <div class="node"><div class="node-top"><h4>Saved HTML report</h4><span class="chip built">built</span></div><p>"Student Report" page. Most accurate.</p><span class="detail">→ DOM / text parser</span></div>
+      <div class="node"><div class="node-top"><h4>Schoology iCal feed</h4><span class="chip built">built</span></div><p>Assignment due dates.</p><span class="detail">→ ICS parser · token in Keychain</span></div>
+    </div>
+  </section>
+
+  <div class="flow"><div class="flow-label">keyless import → then sync</div><div class="chevron">▼</div></div>
+
+  <!-- ZONE 2 — client tier -->
+  <section class="zone client" aria-labelledby="z2">
+    <div class="zone-head">
+      <h2 class="zone-title" id="z2">Client tier — the apps</h2>
+      <span class="zone-tag">Flutter · Android / iOS &nbsp;+&nbsp; internal web console</span>
+    </div>
+    <p class="zone-note">The student app exists today. Caregiver mode and the admin console are new clients on the same backend.</p>
+
+    <div class="layer">
+      <p class="layer-label">Student app · internal layers</p>
+      <div class="grid cols-2">
+        <div class="node"><div class="node-top"><h4>UI + Riverpod state</h4><span class="chip built">built</span></div><p>home · course_detail (What-If) · import · upcoming · settings.</p></div>
+        <div class="node"><div class="node-top"><h4>GradeEngine + models</h4><span class="chip built">built</span></div><p>Weighted/points math, category→period→course rollup, What-If, solver.</p></div>
+        <div class="node"><div class="node-top"><h4>Import / ingestion</h4><span class="chip built">built</span></div><p>OCR classifier · HTML parser · iCal parser + matcher.</p></div>
+        <div class="node"><div class="node-top"><h4>Local cache</h4><span class="chip built">built</span></div><p>Offline-first: SharedPreferences + Keychain, now in front of the server.</p></div>
+      </div>
+    </div>
+
+    <div class="seam">
+      <span class="badge">GradeRepository → SyncRepository</span>
+      <p><b>The one swappable seam.</b> The client already reads its data through <code>GradeRepository</code>; a network-backed <code>SyncRepository</code> plugs in here, so adding the backend never touches the UI or the grade engine.</p>
+    </div>
+
+    <div class="layer">
+      <p class="layer-label">Other clients</p>
+      <div class="grid cols-2">
+        <div class="node"><div class="node-top"><h4>Caregiver mode</h4><span class="chip build">to build</span></div><p>Same app, read-only view of a linked student.</p></div>
+        <div class="node"><div class="node-top"><h4>Admin console (web)</h4><span class="chip build">to build</span></div><p>Separate internal app — never shipped to end users.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="flow"><div class="chevron">▲</div><div class="flow-label">HTTPS · authenticated API calls · sync up &amp; down</div><div class="chevron">▼</div></div>
+
+  <!-- ZONE 3 — application / API tier -->
+  <section class="zone app" aria-labelledby="z3">
+    <div class="zone-head">
+      <h2 class="zone-title" id="z3">Application / API tier</h2>
+      <span class="zone-tag">The single access path to the backend</span>
+    </div>
+    <p class="zone-note">One gateway, three separately-authorized API sets, plus the services around them. Admin actions are a distinct, audited surface — not a flag on the student API.</p>
+
+    <div class="layer">
+      <p class="layer-label">API layer · distinct authorization per set</p>
+      <div class="grid cols-3">
+        <div class="node"><div class="node-top"><h4>Student API</h4><span class="chip build">to build</span></div><p>Auth, sync gradebook, device tokens, caregiver invites.</p></div>
+        <div class="node"><div class="node-top"><h4>Caregiver API</h4><span class="chip build">to build</span></div><p>Accept invite; read-only linked student.</p></div>
+        <div class="node"><div class="node-top"><h4>Admin &amp; Support API</h4><span class="chip build">to build</span></div><p>Privileged, fully-audited account operations.</p></div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <p class="layer-label">Services</p>
+      <div class="grid cols-3">
+        <div class="node"><div class="node-top"><h4>Auth / Identity</h4><span class="chip build">to build</span></div><p>Sign-up, login/SSO, tokens, password reset.</p></div>
+        <div class="node"><div class="node-top"><h4>Change-detection worker</h4><span class="chip build">to build</span></div><p>Diffs new grades vs. stored → enqueues alerts.</p></div>
+        <div class="node"><div class="node-top"><h4>Push dispatch</h4><span class="chip build">to build</span></div><p>APNs / FCM, per notification_prefs.</p></div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <p class="layer-label">System administration &amp; support tooling &nbsp;·&nbsp; behind Admin/Support API, role-gated, all audited</p>
+      <div class="node">
+        <div class="node-top"><h4>Internal admin console operations</h4><span class="chip build">to build</span></div>
+        <p>Every action writes to the audit log.</p>
+        <span class="detail">reset password · update account email · deactivate account · delete account (data erasure) · scoped account lookup · view audit log</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="flow"><div class="chevron">▲</div><div class="flow-label">reads &amp; writes</div><div class="chevron">▼</div></div>
+
+  <!-- ZONE 4 — data tier -->
+  <section class="zone data" aria-labelledby="z4">
+    <div class="zone-head">
+      <h2 class="zone-title" id="z4">Data tier — the database</h2>
+      <span class="zone-tag">System of record</span>
+    </div>
+    <p class="zone-note">PostgreSQL is the authoritative store; grades stay owned by the user (a synced copy, ideally end-to-end encrypted). Object storage and a cache sit alongside it.</p>
+    <div class="grid cols-3">
+      <div class="node db" style="grid-column: span 1;">
+        <div class="node-top"><h4>PostgreSQL</h4><span class="chip build">to build</span></div>
+        <p>Primary relational database.</p>
+        <span class="detail">users · auth_sessions · courses · grading_periods · categories · assignments · share_links · device_tokens · notification_prefs · audit_log</span>
+      </div>
+      <div class="node"><div class="node-top"><h4>Object storage</h4><span class="chip build">to build</span></div><p>Uploaded screenshots, saved HTML, export files.</p></div>
+      <div class="node"><div class="node-top"><h4>Cache (Redis)</h4><span class="chip build">optional</span></div><p>Hot reads: current gradebook, sessions.</p></div>
+    </div>
+  </section>
+
+  <div class="layer" style="margin-top:24px">
+    <p class="layer-label">User modes · client roles</p>
+    <div class="modes">
+      <div class="mode"><span class="who">Student</span><span class="role">end user · full app</span></div>
+      <div class="mode"><span class="who">Caregiver</span><span class="role">invited · read-only</span></div>
+      <div class="mode"><span class="who">Support Agent</span><span class="role">admin console</span></div>
+      <div class="mode"><span class="who">System Admin</span><span class="role">console + config + logs</span></div>
+    </div>
+  </div>
+
+  <div class="sidebar-note"><b>Privacy as a constraint, not the whole model:</b> putting grades on a server weakens the old "no server ever sees your grades" guarantee. Keep cloud sync opt-in, prefer end-to-end encryption so the server stores ciphertext, minimize what's stored, and keep the device usable offline from its local cache.</div>
+
+  <footer>
+    <span>BessyV2 · "Better Schoology" grades</span>
+    <span>Flutter · REST/GraphQL API · PostgreSQL</span>
+    <span>Companion doc: SYSTEM_COMPONENTS.md</span>
+  </footer>
+</div>
