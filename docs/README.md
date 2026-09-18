@@ -14,6 +14,7 @@ Start here to understand what is being built and for whom.
 | [`mvp.md`](mvp.md) | The MVP definition — feature list with IDs, and what is explicitly excluded. |
 | [`features.md`](features.md) | Per-feature specifications (goal, behavior, edge cases). |
 | [`user-flows.md`](user-flows.md) | Screen-by-screen student journeys, cross-referencing feature IDs. |
+| `Schoology_Grade_Tracker_UI_Mockups.docx` | UI mockups for the app screens. |
 
 ### [`system_architecture/`](system_architecture/)
 System design deliverables — the major system components and how they fit together.
@@ -22,20 +23,20 @@ System design deliverables — the major system components and how they fit toge
 |---|---|
 | [`SYSTEM_COMPONENTS.md`](system_architecture/SYSTEM_COMPONENTS.md) | Written breakdown of the major system components (client tier, API/logic tier, data tier). |
 | [`architecture-diagram.html`](system_architecture/architecture-diagram.html) | Interactive visual architecture diagram. |
-| `BessyV2 - System Components & Architecture.docx` | Formatted document version of the architecture writeup. |
+| `Schoology Grade Tracker - System Components & Architecture.docx` | Formatted document version of the architecture writeup. |
 
 ### [`pitch/`](pitch/)
 Prior assignment submissions — the product pitch and competitive analysis.
 
 | File | What it is |
 |---|---|
-| `Bessy_App_Idea_Competitive_Analysis.pdf` | Competitive analysis of the app idea (PDF). |
-| `Bessy_App_Idea_Competitive_Analysis.pptx` | Competitive analysis slide deck. |
+| `Schoology_Grade_Tracker_Competitive_Analysis.pdf` | Competitive analysis of the app idea (PDF). |
+| `Schoology_Grade_Tracker_Competitive_Analysis.pptx` | Competitive analysis slide deck. |
 | `Schoology_Free_Mobile_Client.pptx` | Original pitch deck — free Schoology mobile client concept. |
 
 ## Project overview
 
-BessyV2 is a three-tier application:
+Schoology Grade Tracker is a three-tier application:
 
 1. **Client tier** — a cross-platform Flutter app (Android/iOS), a caregiver/parent
    mode, and an internal admin console.
