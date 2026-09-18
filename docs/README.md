@@ -1,9 +1,19 @@
-# BessyV2 — Documentation
+# Schoology Grade Tracker — Documentation
 
-Project documentation and metadata for **BessyV2**, a privacy-first Flutter grades
-app ("Better Schoology") backed by a cloud sync service.
+Project documentation and metadata for **Schoology Grade Tracker** (internal
+codename `BessyV2`), a privacy-first Flutter grades app backed by an opt-in cloud
+sync service.
 
 ## Contents
+
+### Product docs
+Start here to understand what is being built and for whom.
+
+| File | What it is |
+|---|---|
+| [`mvp.md`](mvp.md) | The MVP definition — feature list with IDs, and what is explicitly excluded. |
+| [`features.md`](features.md) | Per-feature specifications (goal, behavior, edge cases). |
+| [`user-flows.md`](user-flows.md) | Screen-by-screen student journeys, cross-referencing feature IDs. |
 
 ### [`system_architecture/`](system_architecture/)
 System design deliverables — the major system components and how they fit together.
