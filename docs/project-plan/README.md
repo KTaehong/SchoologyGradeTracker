@@ -16,21 +16,21 @@ against it — without re-capturing everything from scratch.
 
 ## The one-paragraph version
 
-The app is **already largely built** (Flutter client, grade engine, keyless
-import, and a Dart backend all exist — see [`../system_architecture/SYSTEM_COMPONENTS.md`](../system_architecture/SYSTEM_COMPONENTS.md)).
-So the remaining MVP work is **not greenfield building** — it's environment
-setup, on-device verification, hardening, deployment, QA, and a release build.
-That is the only reason a 14-feature MVP is realistic in **~35 focused hours**
-across a busy senior-fall semester.
+The plan treats the MVP as a **build from scratch**: all 14 MVP features are
+scheduled as work to build, test, and verify on **both iOS and Android**. The
+timeline holds product work only — no tool-installation or technical-decision
+tasks. Four milestones take the app from "grades you can see" (Oct 9) to
+"QA'd release builds on both platforms" (Dec 4) in **~34 planned hours** across
+a busy senior-fall semester.
 
 ## Ground rules baked into this plan
 
-- **Start:** Monday **2026-09-28**. **Dev cutoff:** Friday **2026-12-04**.
+- **Start:** Thursday **2026-09-24**. **Dev cutoff:** Friday **2026-12-04**.
 - **Last ~2 weeks (Dec 7–18) are reserved for live-demo setup**, not development
   (per the assignment).
 - Estimates are **AI-assisted** (Claude authors/debugs; the developer reviews and
-  learns) and then **padded ×1.5** for beginner + first-time-setup variance.
-- The plan is loaded to ~90% of capacity with a thin buffer and a **named cut
+  learns) and then **padded ×1.5** for beginner + two-platform variance.
+- The plan is loaded to ~89% of capacity with a thin buffer and a **named cut
   list** (see [`02-project-plan.md`](02-project-plan.md) §Risk) so the date holds
   even when estimates slip. It *will* slip somewhere — that's expected, and
   [`03-velocity-tracking.md`](03-velocity-tracking.md) is how we correct.
