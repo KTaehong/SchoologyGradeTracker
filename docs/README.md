@@ -10,6 +10,11 @@ Start here to understand what is being built and for whom.
 | [`user-flows.md`](user-flows.md) | Screen-by-screen student journeys, cross-referencing feature IDs. |
 | `Schoology_Grade_Tracker_UI_Mockups.docx` | UI mockups for the app screens. |
 
+## [`database/`](database/)
+The cloud database design (Supabase / PostgreSQL): feature list, ER diagram,
+table reference, forecasting model, and hosting setup. The SQL itself is in
+[`../supabase/`](../supabase/).
+
 ## [`project-plan/`](project-plan/)
 The MVP schedule: milestones, tasks, available hours, and progress tracking.
 
