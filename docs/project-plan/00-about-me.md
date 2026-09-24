@@ -17,15 +17,13 @@ changes.*
 ## Coding / dev capability
 
 - **Self-rated: beginner.** Comfortable following along and reviewing code, still
-  learning fundamentals. **AI (Claude Code) does most of the authoring and
-  debugging; the developer reviews, tests, and learns.**
-- New to most of the *remaining* stack specifically: on-device Flutter builds,
-  Android Studio/emulator, PostgreSQL + server deployment, secure token storage,
-  release signing. This is where variance (and the padding factor) comes from —
-  not typing code, but toolchain/setup/integration surprises.
-- **Implication for the plan:** favor tasks that AI can drive to a verifiable
-  result with minimal human back-and-forth (schemas, parsers, API contracts,
-  test suites), and budget generously for first-time environment setup.
+  learning fundamentals. Uses **AI-assisted development** tools.
+- New to most of the stack specifically: on-device mobile builds for iOS and
+  Android, server work for sync, secure token storage, and release builds. This
+  is where variance (and the padding factor) comes from — not typing code, but
+  integration surprises.
+- **Implication for the plan:** favor tasks with a verifiable result (schemas,
+  parsers, API contracts, test suites).
 
 ## Working style & realistic capacity
 
@@ -39,19 +37,20 @@ changes.*
 
 ## Machine / toolchain (as of 2026-09-21)
 
-- **Windows 11** dev machine. Flutter installed at `C:\Users\thkim\flutter` but
-  **not on PATH** (each shell needs `export PATH="/c/Users/thkim/flutter/bin:$PATH"`).
-  Flutter 3.47.2 / Dart 3.13.2.
-- **No macOS** → **iOS builds are out of scope** for this MVP demo (can't build/
-  sign iOS without a Mac + Apple Developer account). **Android is the demo
-  target.** iOS is a post-semester item.
-- Android Studio / SDK / emulator: **not yet installed** — a setup task in M1.
-- The Dart backend runs locally; no cloud host chosen yet — a setup task in M3.
+- **Windows 11** dev machine.
+- **Target platforms: iOS and Android.** Every MVP feature must work on both.
+- **App stack: React Native + Expo (TypeScript).** Chosen because it is the
+  easiest way to build and test for iOS *and* Android from a Windows PC: the
+  free **Expo Go** app runs the app on a real iPhone or Android phone by scanning
+  a QR code, and **EAS Build** makes iOS and Android builds in the cloud, so no
+  Mac is needed. Screenshot text reading (F04) needs a custom *development
+  build* instead of Expo Go.
+  Tool installs and technical decisions are handled inside the tasks that need
+  them, not scheduled as separate timeline items.
 
 ## What this means for estimating
 
 - Base estimates assume **AI-assisted, optimistic** effort.
 - A **×1.5 padding factor** converts base → planned hours, covering the beginner
-  learning curve and first-time setup/deploy variance. Not padded higher because
-  most remaining work is *verification and configuration of already-written code*,
-  which AI accelerates well.
+  learning curve and the extra work of shipping on both iOS and Android. The plan
+  treats every feature as built from scratch.
