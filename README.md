@@ -9,6 +9,7 @@ and plan ahead with What-If, final-grade, and semester tools.
 | Path | What it is |
 |---|---|
 | [`mobile/`](mobile/) | The app — React Native + Expo (TypeScript). See [`mobile/README.md`](mobile/README.md) to run it on your phone. |
+| [`supabase/`](supabase/) | The cloud database: SQL migrations and tests. Design notes in [`docs/database/`](docs/database/). |
 | [`docs/`](docs/) | Product specs (MVP, features, user flows), the project plan, and pitch materials. |
 
 ## Quick start
