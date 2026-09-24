@@ -24,6 +24,7 @@ other (for example on school Wi-Fi), run `npx expo start --tunnel` instead.
 ## Checks
 
 ```bash
+npm test            # unit tests (Jest)
 npm run typecheck   # TypeScript
 npm run lint        # ESLint
 ```
@@ -33,4 +34,7 @@ npm run lint        # ESLint
 - `src/app/` — screens. Each file is a tab: `index.tsx` (Grades),
   `upcoming.tsx`, `settings.tsx`. `_layout.tsx` wires up the tabs and theme.
 - `src/components/` — shared UI pieces.
+- `src/data/` — the gradebook model, saving it on the phone, and the demo
+  gradebook. On first launch the app fills itself with demo grades and
+  assignments; *Settings → Data* can reload the demo or erase everything.
 - `src/theme/` — colors and the light/dark/system theme setting.

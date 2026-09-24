@@ -1,5 +1,16 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
+
+import { loadThemePreference, saveThemePreference } from '@/data/storage';
 
 import { Colors, type ColorScheme } from './colors';
 
@@ -15,8 +26,9 @@ const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>
 
 export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  const choseThisSession = useRef(false);
 
-  const setPreference = useCallback((next: ThemePreference) => {
+  const applyPreference = useCallback((next: ThemePreference) => {
     // On iOS and Android, overriding the app-wide appearance also restyles
     // native UI such as the tab bar. Web has no such override.
     if (Platform.OS !== 'web') {
@@ -24,6 +36,27 @@ export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
     }
     setPreferenceState(next);
   }, []);
+
+  // Restore the choice saved on the phone.
+  useEffect(() => {
+    loadThemePreference()
+      .then((saved) => {
+        // Don't override a choice made while the saved one was still loading.
+        if (saved && !choseThisSession.current) {
+          applyPreference(saved);
+        }
+      })
+      .catch(() => undefined);
+  }, [applyPreference]);
+
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      choseThisSession.current = true;
+      applyPreference(next);
+      saveThemePreference(next).catch(() => undefined);
+    },
+    [applyPreference],
+  );
 
   const value = useMemo(() => ({ preference, setPreference }), [preference, setPreference]);
 
