@@ -37,9 +37,7 @@ changes.*
 
 ## Machine / toolchain (as of 2026-09-21)
 
-- **Windows 11** dev machine. Flutter installed at `C:\Users\thkim\flutter` but
-  **not on PATH** (each shell needs `export PATH="/c/Users/thkim/flutter/bin:$PATH"`).
-  Flutter 3.47.2 / Dart 3.13.2.
+- **Windows 11** dev machine.
 - **Target platforms: iOS and Android.** Every MVP feature must work on both.
 - **App stack: React Native + Expo (TypeScript).** Chosen because it is the
   easiest way to build and test for iOS *and* Android from a Windows PC: the

@@ -5,7 +5,7 @@
 > on-device grade engine, what-if and final-grade tools, and an optional private
 > cloud account that syncs those grades across their own devices_.**
 
-Product name: **Schoology Grade Tracker** (internal codename `BessyV2`). Primary
+Product name: **Schoology Grade Tracker**. Primary
 MVP user: **student**. The cloud sync service is included so a student's grades
 survive a reinstall and follow them to a second device — it is opt-in and off by
 default.

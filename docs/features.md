@@ -154,7 +154,7 @@ goes through; "Edge cases" lists conditions the app must handle.
   3. An agenda groups items by day; tapping one opens the assignment in Schoology.
 - **Edge cases:** The feed does **not** name the owning class, so unmatched items
   show as "Unfiled." The feed URL contains a password-equivalent token and is
-  stored securely, never shared. On **Flutter web** the fetch is blocked by CORS;
+  stored securely, never shared. In a web browser the fetch is blocked by CORS;
   native Android/iOS (the real target) fetch normally. Some districts post no
   assignment due dates to Schoology, in which case the agenda is empty.
 
