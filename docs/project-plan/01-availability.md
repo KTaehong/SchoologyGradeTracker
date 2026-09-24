@@ -59,8 +59,8 @@ Weeks run Monday–Sunday (W0 is the short start week, Thu–Sun).
 The classic **planning fallacy**: people systematically underestimate their own
 tasks. We counter it two ways:
 
-1. **Estimate in base AI-assisted hours** — optimistic effort with Claude Code
-   authoring and debugging.
+1. **Estimate in base AI-assisted hours** — optimistic effort using AI-assisted
+   development tools.
 2. **Multiply base × 1.5 → planned hours.** The 1.5 covers the beginner
    learning curve and the extra work of making every feature run on **both iOS
    and Android**.

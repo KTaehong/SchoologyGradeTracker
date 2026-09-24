@@ -28,8 +28,10 @@ a busy senior-fall semester.
 - **Start:** Thursday **2026-09-24**. **Dev cutoff:** Friday **2026-12-04**.
 - **Last ~2 weeks (Dec 7–18) are reserved for live-demo setup**, not development
   (per the assignment).
-- Estimates are **AI-assisted** (Claude authors/debugs; the developer reviews and
-  learns) and then **padded ×1.5** for beginner + two-platform variance.
+- Estimates are **AI-assisted** and then **padded ×1.5** for beginner +
+  two-platform variance.
+- **App stack:** React Native + Expo (TypeScript), so one codebase runs on iOS
+  and Android and can be tested on real phones from a Windows PC.
 - The plan is loaded to ~89% of capacity with a thin buffer and a **named cut
   list** (see [`02-project-plan.md`](02-project-plan.md) §Risk) so the date holds
   even when estimates slip. It *will* slip somewhere — that's expected, and

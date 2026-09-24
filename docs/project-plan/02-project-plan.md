@@ -16,9 +16,11 @@ counted as done.
 - **The timeline holds product work only** — features, testing, and release.
   Tool installation and technical decisions are not scheduled as tasks; they are
   handled inside the task that needs them.
-- Tasks are chosen to be **AI-verifiable with little human back-and-forth**
-  (parsers, calculations, and test suites that Claude can drive to a green,
-  checkable result).
+- Tasks are chosen to have a **checkable result** (parsers, calculations, and
+  test suites that end green or red).
+- **App stack: React Native + Expo (TypeScript).** Day-to-day testing runs in
+  the free Expo Go app on a real iPhone and Android phone; iOS and Android builds
+  are made in the cloud with EAS Build, so no Mac is required.
 
 ---
 

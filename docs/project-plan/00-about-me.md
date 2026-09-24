@@ -17,14 +17,13 @@ changes.*
 ## Coding / dev capability
 
 - **Self-rated: beginner.** Comfortable following along and reviewing code, still
-  learning fundamentals. **AI (Claude Code) does most of the authoring and
-  debugging; the developer reviews, tests, and learns.**
+  learning fundamentals. Uses **AI-assisted development** tools.
 - New to most of the stack specifically: on-device mobile builds for iOS and
-  Android, server work for sync, secure token storage, and release builds. This is where variance (and the padding factor) comes from —
-  not typing code, but integration surprises.
-- **Implication for the plan:** favor tasks that AI can drive to a verifiable
-  result with minimal human back-and-forth (schemas, parsers, API contracts,
-  test suites).
+  Android, server work for sync, secure token storage, and release builds. This
+  is where variance (and the padding factor) comes from — not typing code, but
+  integration surprises.
+- **Implication for the plan:** favor tasks with a verifiable result (schemas,
+  parsers, API contracts, test suites).
 
 ## Working style & realistic capacity
 
@@ -42,6 +41,12 @@ changes.*
   **not on PATH** (each shell needs `export PATH="/c/Users/thkim/flutter/bin:$PATH"`).
   Flutter 3.47.2 / Dart 3.13.2.
 - **Target platforms: iOS and Android.** Every MVP feature must work on both.
+- **App stack: React Native + Expo (TypeScript).** Chosen because it is the
+  easiest way to build and test for iOS *and* Android from a Windows PC: the
+  free **Expo Go** app runs the app on a real iPhone or Android phone by scanning
+  a QR code, and **EAS Build** makes iOS and Android builds in the cloud, so no
+  Mac is needed. Screenshot text reading (F04) needs a custom *development
+  build* instead of Expo Go.
   Tool installs and technical decisions are handled inside the tasks that need
   them, not scheduled as separate timeline items.
 
