@@ -31,9 +31,13 @@ npm run lint        # ESLint
 
 ## Layout
 
-- `src/app/` — screens. Each file is a tab: `index.tsx` (Grades),
-  `upcoming.tsx`, `settings.tsx`. `_layout.tsx` wires up the tabs and theme.
+- `src/app/` — screens. `(tabs)/` holds the three tabs: `index.tsx` (Grades),
+  `upcoming.tsx`, `settings.tsx`. `course/[id].tsx` is a course's detail screen
+  and `add.tsx` is the *Add grades* sheet. `_layout.tsx` files wire up
+  navigation and the theme.
 - `src/components/` — shared UI pieces.
+- `src/lib/coming-soon.ts` — buttons for features that aren't built yet show a
+  "Coming soon" message.
 - `src/data/` — the gradebook model, saving it on the phone, and the demo
   gradebook. On first launch the app fills itself with demo grades and
   assignments; *Settings → Data* can reload the demo or erase everything.

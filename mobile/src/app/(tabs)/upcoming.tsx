@@ -1,11 +1,13 @@
 import { StyleSheet } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
+import { HeaderButton } from '@/components/header-button';
 import { Loading } from '@/components/loading';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useGradebook } from '@/data/gradebook-store';
+import { comingSoon } from '@/lib/coming-soon';
 import { formatDayLabel, formatDueTime, groupUpcomingByDay } from '@/data/upcoming';
 import { Radius, Spacing } from '@/theme/colors';
 
@@ -23,13 +25,14 @@ export default function UpcomingScreen() {
   const { courses, upcoming } = state.gradebook;
   const courseNames = new Map(courses.map((course) => [course.id, course.name]));
   const days = groupUpcomingByDay(upcoming);
+  const refresh = () => comingSoon('Refreshing from your Schoology calendar');
 
   return (
-    <Screen title="Upcoming">
+    <Screen title="Upcoming" action={<HeaderButton label="Refresh" onPress={refresh} />}>
       {days.length === 0 ? (
         <EmptyState
           title="Nothing due"
-          message="Assignments from your Schoology calendar will show up here."
+          message="Connect your Schoology calendar in Settings to see what's due."
         />
       ) : (
         days.map((day) => (
