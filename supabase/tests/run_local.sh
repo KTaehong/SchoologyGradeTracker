@@ -21,4 +21,11 @@ if ! psql -q -v ON_ERROR_STOP=1 -o /dev/null -d "$db" -f tests/gradebook_test.sq
   echo "Tests FAILED."
   exit 1
 fi
+echo "seed     seed.sql (twice, to check it is safe to repeat)"
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f seed.sql
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f seed.sql
+
+echo "demo     ../docs/database/demo.sql"
+psql -q -v ON_ERROR_STOP=1 -o /dev/null -d "$db" -f ../docs/database/demo.sql
+
 echo "All tests passed."

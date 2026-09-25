@@ -8,7 +8,8 @@ every student's data private to them.
   with SQL, with built-in sign-in (email, phone, Google, Apple, Microsoft).
 - **SQL:** [`supabase/migrations/`](../../supabase/migrations/) (run in order).
 - **Tests:** [`supabase/tests/gradebook_test.sql`](../../supabase/tests/gradebook_test.sql).
-- **Example queries:** [`example-queries.sql`](example-queries.sql).
+- **Sample data:** [`supabase/seed.sql`](../../supabase/seed.sql).
+- **Class demo queries:** [`demo.sql`](demo.sql).
 
 Feature IDs (F01–F14) refer to [`../mvp.md`](../mvp.md).
 
@@ -344,19 +345,50 @@ but is not a relational SQL database.
   secret from that company's developer console. Supabase's page for each
   provider links to the steps.
 
-### Try it with demo data
-1. **Authentication → Users → Add user**: create two users (for example
-   `ana@example.com` and `ben@example.com`). Their `profiles` rows appear
-   automatically.
-2. In the SQL editor, copy each user's id and run:
-   ```sql
-   select public.load_sample_gradebook('<user id>');
-   ```
-3. Run queries from [`example-queries.sql`](example-queries.sql).
+### Load the sample data
+In **SQL Editor**, paste and **Run** [`supabase/seed.sql`](../../supabase/seed.sql).
+It adds three demo students:
+
+| Username | What they show |
+|---|---|
+| `ana_park` | 5 AP courses with forecasts. Calc: current 90.00 (A-), projected 89.00 (B+). |
+| `ben_ortiz` | The same courses. Some forecasts are replaced by actual grades. Calc: 91.20 (A-). |
+| `chris_lee` | One class built by hand, points grading. Chemistry: 80.77 (B-). |
+
+Running the seed a second time does nothing. The demo students have no
+password, so nobody can sign in as them.
 
 The SQL editor runs as an admin and **bypasses RLS**, so it shows every
-student's rows. That is why the example queries filter by `student_id`. The
-app, signed in as one student, only ever sees that student's rows.
+student's rows. The app, signed in as one student, sees only that student's rows.
+
+### Demo in class
+[`demo.sql`](demo.sql) has the queries, in three parts:
+1. **Inspect the schema:** tables with row counts, columns, constraints,
+   indexes, RLS policies, views, and functions.
+2. **Query the data:** accounts, grades, course detail, semester grades,
+   forecast accuracy, the score needed on the midterm, and upcoming items.
+3. **Live change:** replace Ana's midterm forecast with an actual grade, and
+   see her grade change. Query 3.4 resets it for the next demo.
+
+**How to connect:**
+- **Supabase SQL Editor** (browser, nothing to install). Sign in at
+  [supabase.com/dashboard](https://supabase.com/dashboard), open the
+  project, open **SQL Editor**, paste `demo.sql`, select one query, and
+  press **Ctrl+Enter** (Cmd+Enter on a Mac).
+- **Any SQL client** (psql, DBeaver, TablePlus, DataGrip). In the dashboard,
+  click **Connect** and copy the **Session pooler** connection string. It
+  works on IPv4 networks such as school Wi-Fi. For example:
+  ```bash
+  psql "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+  ```
+  Do not commit or show the password.
+
+**Before class:**
+- Free Supabase projects **pause after 7 days without activity**. Open the
+  dashboard the day before class. If the project is paused, click
+  **Restore project** and wait a few minutes.
+- Run query 3.4 once, so that the live change starts from the forecast.
+- Make sure the school network allows supabase.com, or use a phone hotspot.
 
 ### Connecting the app later (T3.4)
 The app needs the **Project URL** and the **anon public key** from
@@ -367,4 +399,4 @@ app or in this repository.
 ### Running the tests locally (optional)
 With PostgreSQL 15+ installed: `supabase/tests/run_local.sh`. It creates a
 scratch database, adds a small stand-in for Supabase's `auth` schema, applies
-the migrations, and runs the tests.
+the migrations, runs the tests, loads the seed twice, and runs `demo.sql`.
