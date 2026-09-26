@@ -8,7 +8,12 @@ create role service_role nologin bypassrls;
 create schema auth;
 
 create table auth.users (
+  instance_id        uuid,
   id                 uuid primary key,
+  aud                text,
+  role               text,
+  email_confirmed_at timestamptz,
+  updated_at         timestamptz,
   email              text,
   phone              text,
   raw_user_meta_data jsonb,
