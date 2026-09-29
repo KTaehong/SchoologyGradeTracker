@@ -15,12 +15,14 @@ for f in migrations/*.sql; do
   psql -q -v ON_ERROR_STOP=1 -d "$db" -f "$f"
 done
 
-echo "test     tests/gradebook_test.sql"
-if ! psql -q -v ON_ERROR_STOP=1 -o /dev/null -d "$db" -f tests/gradebook_test.sql 2>&1 \
-     | sed 's/^psql:[^ ]* NOTICE:  //'; then
-  echo "Tests FAILED."
-  exit 1
-fi
+for t in tests/gradebook_test.sql tests/grade_api_test.sql; do
+  echo "test     $t"
+  if ! psql -q -v ON_ERROR_STOP=1 -o /dev/null -d "$db" -f "$t" 2>&1 \
+       | sed 's/^psql:[^ ]* NOTICE:  //'; then
+    echo "Tests FAILED."
+    exit 1
+  fi
+done
 echo "seed     seed.sql (twice, to check it is safe to repeat)"
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f seed.sql
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f seed.sql

@@ -21,6 +21,14 @@ The iOS + Android app, built with React Native + Expo (TypeScript).
 Your phone and computer need to be on the same Wi-Fi. If they can't see each
 other (for example on school Wi-Fi), run `npx expo start --tunnel` instead.
 
+## Cloud API (optional)
+
+The app works fully offline. To use the cloud API (sign-in, grades snapshot,
+saved forecasts), copy `.env.example` to `.env.local` and fill in the Project
+URL and anon key from Supabase (**Project Settings → API**), then restart
+`npx expo start`. Without them the API reports `not_configured` and the rest of
+the app is unaffected. See [`docs/database/README.md`](../docs/database/README.md#6-grade-engine-api).
+
 ## Checks
 
 ```bash
@@ -41,4 +49,9 @@ npm run lint        # ESLint
 - `src/data/` — the gradebook model, saving it on the phone, and the demo
   gradebook. On first launch the app fills itself with demo grades and
   assignments; *Settings → Data* can reload the demo or erase everything.
+- `src/api/` — the cloud API. `client.ts` makes the one Supabase client, which
+  keeps the sign-in session in secure storage and sends the token with every
+  request; `auth.ts` signs in and out; `grades.ts` is the grade engine API
+  (grades snapshot, add/set/remove forecasts); `use-session.ts` is a hook for
+  the sign-in state.
 - `src/theme/` — colors and the light/dark/system theme setting.
