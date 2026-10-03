@@ -4,9 +4,12 @@
  * and sent with every API call automatically.
  */
 import type { AuthError, Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
 import { getSupabase, isApiConfigured } from './client';
 import { ApiError } from './errors';
+import { parseOAuthCallback } from './oauth-callback';
 
 export type { Session };
 
@@ -56,6 +59,55 @@ export async function signUpWithEmail({
     throw toAuthApiError(error);
   }
   return data.session;
+}
+
+/** Sign-in providers, by their Supabase names ('azure' is Microsoft). */
+export type OAuthProvider = 'google' | 'apple' | 'azure';
+
+/** Where the provider sends the student back: `gradetracker://auth/callback` in a build. */
+export function oauthRedirectUrl(): string {
+  return Linking.createURL('auth/callback');
+}
+
+/**
+ * Signs in with Google, Apple, or Microsoft in a secure in-app browser.
+ * Resolves to `null` if the student closes the browser without finishing.
+ *
+ * Each provider must be turned on in Supabase (Authentication → Sign In /
+ * Providers), and `oauthRedirectUrl()` must be in Authentication → URL
+ * Configuration → Redirect URLs. See docs/database/README.md.
+ */
+export async function signInWithProvider(provider: OAuthProvider): Promise<Session | null> {
+  const supabase = getSupabase();
+  const redirectTo = oauthRedirectUrl();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      // Microsoft only shares the email address when asked for it.
+      scopes: provider === 'azure' ? 'email' : undefined,
+    },
+  });
+  if (error) {
+    throw toAuthApiError(error);
+  }
+
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+  if (result.type !== 'success') {
+    return null;
+  }
+
+  const callback = parseOAuthCallback(result.url);
+  if (callback.kind === 'error') {
+    throw new ApiError('invalid_input', callback.message);
+  }
+  const exchanged = await supabase.auth.exchangeCodeForSession(callback.code);
+  if (exchanged.error) {
+    throw toAuthApiError(exchanged.error);
+  }
+  return exchanged.data.session;
 }
 
 /** Signs out and deletes the saved session from secure storage. */

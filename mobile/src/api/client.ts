@@ -42,6 +42,9 @@ export function getSupabase(): SupabaseClient {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
+      // Google / Apple / Microsoft sign-in returns a one-time code to the app,
+      // which is swapped for a session (see signInWithProvider in auth.ts).
+      flowType: 'pkce',
     },
   });
 

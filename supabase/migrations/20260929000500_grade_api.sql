@@ -58,11 +58,12 @@ $$;
 --                                    "current_percent", "projected_percent" } ] } ],
 --   "semesters": [ { "semester", "label", "exam_weight",
 --                    "current_percent", "projected_percent" } ],
---   "forecasts": [ { "assignment_id", "period_id", "category_id", "title", "due_date",
---                    "max_score", "forecast_score", "is_placeholder" } ]
+--   "ungraded": [ { "assignment_id", "period_id", "category_id", "title", "due_date",
+--                   "max_score", "forecast_score", "is_placeholder" } ]
 -- }
 -- Percents are rounded to 2 decimals; null means "nothing graded yet".
--- `forecasts` lists the forecasts still waiting for a real grade.
+-- `ungraded` lists the work with no actual grade yet (excused work left out),
+-- with its forecast or null: the items a student can forecast.
 -- -----------------------------------------------------------------------------
 create or replace function public.course_grade_snapshot(p_course_id uuid)
 returns jsonb
@@ -124,7 +125,7 @@ as $$
              order by cs.semester)
       from cur_sem cs
       left join proj_sem ps on ps.semester = cs.semester), '[]'::jsonb),
-    'forecasts', coalesce((
+    'ungraded', coalesce((
       select jsonb_agg(jsonb_build_object(
                'assignment_id',  a.id,
                'period_id',      cat.period_id,
@@ -139,7 +140,6 @@ as $$
       join public.categories cat on cat.id = a.category_id
       join public.grading_periods gp on gp.id = cat.period_id
       where gp.course_id = c.id
-        and a.forecast_score is not null
         and a.actual_score is null
         and not a.excused), '[]'::jsonb)
   )

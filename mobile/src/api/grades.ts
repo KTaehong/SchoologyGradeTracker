@@ -47,8 +47,8 @@ export type SemesterGrades = {
   projectedPercent: number | null;
 };
 
-/** A forecast that is still waiting for a real grade. */
-export type PendingForecast = {
+/** Work with no actual grade yet: what a student can forecast. */
+export type UngradedAssignment = {
   assignmentId: string;
   periodId: string;
   categoryId: string;
@@ -56,7 +56,8 @@ export type PendingForecast = {
   /** `YYYY-MM-DD`, when known. */
   dueDate: string | null;
   maxScore: number;
-  forecastScore: number;
+  /** The forecast, or `null` when there is none yet. */
+  forecastScore: number | null;
   /** `true` for work that is not in Schoology yet (added with `addForecast`). */
   isPlaceholder: boolean;
 };
@@ -70,7 +71,7 @@ export type CourseGrades = {
   projected: LetterGrade;
   periods: PeriodGrades[];
   semesters: SemesterGrades[];
-  forecasts: PendingForecast[];
+  ungraded: UngradedAssignment[];
 };
 
 export type GradesSnapshot = {
@@ -142,14 +143,14 @@ type WireSemester = {
   projected_percent: number | null;
 };
 
-type WireForecast = {
+type WireUngraded = {
   assignment_id: string;
   period_id: string;
   category_id: string;
   title: string;
   due_date: string | null;
   max_score: number;
-  forecast_score: number;
+  forecast_score: number | null;
   is_placeholder: boolean;
 };
 
@@ -162,7 +163,7 @@ type WireCourse = {
   projected: LetterGrade;
   periods: WirePeriod[];
   semesters: WireSemester[];
-  forecasts: WireForecast[];
+  ungraded: WireUngraded[];
 };
 
 type WireSnapshot = { computed_at: string; courses: WireCourse[] };
@@ -212,7 +213,7 @@ function toCourse(wire: WireCourse): CourseGrades {
       currentPercent: s.current_percent,
       projectedPercent: s.projected_percent,
     })),
-    forecasts: wire.forecasts.map((f) => ({
+    ungraded: wire.ungraded.map((f) => ({
       assignmentId: f.assignment_id,
       periodId: f.period_id,
       categoryId: f.category_id,
@@ -260,6 +261,14 @@ export function createGradesApi(call: RpcCaller) {
     async getCourseGrades(courseId: string): Promise<CourseGrades> {
       const wire = (await call('get_grades', { p_course_id: courseId })) as WireSnapshot;
       return toCourse(wire.courses[0]);
+    },
+
+    /**
+     * Fills an empty account with the sample gradebook (F01), so there is
+     * something to explore. Rejects if the account already has courses.
+     */
+    async loadSampleGradebook(): Promise<void> {
+      await call('load_sample_gradebook');
     },
 
     /** Forecast work that is not in Schoology yet (saved as a placeholder assignment). */

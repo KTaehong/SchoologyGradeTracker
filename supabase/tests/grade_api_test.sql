@@ -109,8 +109,14 @@ select pg_temp.expect('ungraded Q2 has no current percent',
     where p ->> 'name' = 'Q2'), 'null'::jsonb);
 select pg_temp.expect('semester 1 card, projected',
   (pg_temp.calc(public.get_grades()) -> 'semesters' -> 0 ->> 'projected_percent')::numeric, 89.00);
-select pg_temp.expect('pending forecasts listed (Quiz 2.2, Unit 3 Test, midterm)',
-  jsonb_array_length(pg_temp.calc(public.get_grades()) -> 'forecasts'), 3);
+select pg_temp.expect('ungraded work listed (Quiz 2.2, Unit 3 Test, midterm)',
+  (select string_agg(u ->> 'title', ',' order by u ->> 'title')
+     from jsonb_array_elements(pg_temp.calc(public.get_grades()) -> 'ungraded') u),
+  'Quiz 2.2,Semester 1 Midterm Exam,Unit 3 Test: Integrals');
+select pg_temp.expect('excused work is not listed as ungraded',
+  (select count(*) from jsonb_array_elements(public.get_grades() -> 'courses') c,
+          jsonb_array_elements(c -> 'ungraded') u
+    where u ->> 'title' = 'Capacitor Lab'), 0::bigint);
 
 select pg_temp.expect('one course by id',
   (select jsonb_array_length(public.get_grades(id) -> 'courses')
@@ -168,6 +174,9 @@ select pg_temp.expect('remove_forecast clears the forecast on a real assignment'
     -> 'assignment' -> 'forecast_score', 'null'::jsonb);
 select pg_temp.expect('the real assignment is still there',
   (select count(*) from public.assignments where title = 'Quiz 2.2'), 1::bigint);
+select pg_temp.expect('it is still listed as ungraded, now with no forecast',
+  (select u -> 'forecast_score' from jsonb_array_elements(pg_temp.calc(public.get_grades()) -> 'ungraded') u
+    where u ->> 'title' = 'Quiz 2.2'), 'null'::jsonb);
 select pg_temp.expect('remove_forecast deletes a placeholder',
   public.remove_forecast((select id from public.assignments where title = 'Quiz 3.1')) -> 'assignment',
   'null'::jsonb);

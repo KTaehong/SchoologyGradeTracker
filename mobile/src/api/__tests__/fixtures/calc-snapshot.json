@@ -12,12 +12,12 @@
           "name": "Q1",
           "weight": null,
           "semester": 1,
-          "period_id": "051f141c-b79d-4580-b634-bb6759fdc580",
+          "period_id": "62e2b793-22b6-46b5-93c6-5bd5b2b9943c",
           "categories": [
             {
               "name": "Tests",
               "weight": 50.0,
-              "category_id": "7926a8ab-b827-47b2-bd9c-9f5097b00799",
+              "category_id": "4abb742e-9ec9-4b91-ba21-c3af5b96d7f6",
               "drop_lowest": 0,
               "current_percent": 90.0,
               "projected_percent": 90.0
@@ -25,7 +25,7 @@
             {
               "name": "Quizzes",
               "weight": 30.0,
-              "category_id": "fb74d0f6-53fe-4557-9948-7904f93a9fd3",
+              "category_id": "00812ffb-b163-4905-81b0-fa6fcd271b6f",
               "drop_lowest": 0,
               "current_percent": 90.0,
               "projected_percent": 90.0
@@ -33,7 +33,7 @@
             {
               "name": "Homework",
               "weight": 20.0,
-              "category_id": "9e5d73f0-6f40-45e7-a9f9-07981b0381f7",
+              "category_id": "39dc7538-a3ad-4b88-8538-d5a6476fe909",
               "drop_lowest": 1,
               "current_percent": 90.0,
               "projected_percent": 90.0
@@ -47,12 +47,12 @@
           "name": "Q2",
           "weight": null,
           "semester": 1,
-          "period_id": "81f5b781-d972-433a-a9ed-94c2158bba14",
+          "period_id": "22a341b9-66d1-4588-bb0e-8beb3aa38825",
           "categories": [
             {
               "name": "Tests",
               "weight": 50.0,
-              "category_id": "dc2791eb-f1ce-41de-9937-e1360ff0769c",
+              "category_id": "26912592-405c-494c-98e3-cb55bfa57a07",
               "drop_lowest": 0,
               "current_percent": null,
               "projected_percent": 90.0
@@ -60,7 +60,7 @@
             {
               "name": "Quizzes",
               "weight": 30.0,
-              "category_id": "f1dc44ce-dade-466e-a41a-388ab8811bd3",
+              "category_id": "774fbd8e-65d2-4777-aa7a-436c2c64ac41",
               "drop_lowest": 0,
               "current_percent": null,
               "projected_percent": null
@@ -68,7 +68,7 @@
             {
               "name": "Homework",
               "weight": 20.0,
-              "category_id": "7b14d3d4-4bc0-4148-8245-a5336a5bea8d",
+              "category_id": "bc475955-0edb-4299-b8b8-52327c1f8c1a",
               "drop_lowest": 1,
               "current_percent": null,
               "projected_percent": null
@@ -82,12 +82,12 @@
           "name": "Midterm Exam",
           "weight": 20.0,
           "semester": 1,
-          "period_id": "e0b17a93-9e1b-4d15-8e69-a86c1004458d",
+          "period_id": "41cd7343-ece2-4542-a366-d0e87dc2bb97",
           "categories": [
             {
               "name": "Exam",
               "weight": null,
-              "category_id": "cdb55854-13ee-4576-a178-348ec14d4b04",
+              "category_id": "1ab2a178-6bf2-45a5-9907-b70a04acb03e",
               "drop_lowest": 0,
               "current_percent": null,
               "projected_percent": 85.0
@@ -98,39 +98,39 @@
         }
       ],
       "teacher": "Ms. Rivera",
-      "course_id": "4f3155d5-f3d4-4485-a2ba-cbbcefb94ebc",
-      "forecasts": [
+      "ungraded": [
         {
           "title": "Quiz 2.2",
-          "due_date": "2026-09-27",
+          "due_date": "2026-10-01",
           "max_score": 10.0,
-          "period_id": "051f141c-b79d-4580-b634-bb6759fdc580",
-          "category_id": "fb74d0f6-53fe-4557-9948-7904f93a9fd3",
-          "assignment_id": "92ba9f1e-837c-48cd-b4a4-b839e82466d7",
+          "period_id": "62e2b793-22b6-46b5-93c6-5bd5b2b9943c",
+          "category_id": "00812ffb-b163-4905-81b0-fa6fcd271b6f",
+          "assignment_id": "d595cd4f-36c6-49ff-987d-a5b343006e93",
           "forecast_score": 9.0,
           "is_placeholder": false
         },
         {
           "title": "Unit 3 Test: Integrals",
-          "due_date": "2026-10-09",
+          "due_date": "2026-10-13",
           "max_score": 100.0,
-          "period_id": "81f5b781-d972-433a-a9ed-94c2158bba14",
-          "category_id": "dc2791eb-f1ce-41de-9937-e1360ff0769c",
-          "assignment_id": "6c60dafe-f768-467e-adba-e96b4f33fabb",
+          "period_id": "22a341b9-66d1-4588-bb0e-8beb3aa38825",
+          "category_id": "26912592-405c-494c-98e3-cb55bfa57a07",
+          "assignment_id": "60f422bb-691f-4208-8d8a-7abcaee83ce5",
           "forecast_score": 90.0,
           "is_placeholder": true
         },
         {
           "title": "Semester 1 Midterm Exam",
-          "due_date": "2026-11-28",
+          "due_date": "2026-12-02",
           "max_score": 100.0,
-          "period_id": "e0b17a93-9e1b-4d15-8e69-a86c1004458d",
-          "category_id": "cdb55854-13ee-4576-a178-348ec14d4b04",
-          "assignment_id": "18d577b0-7bed-49a2-b018-41de0326fe00",
+          "period_id": "41cd7343-ece2-4542-a366-d0e87dc2bb97",
+          "category_id": "1ab2a178-6bf2-45a5-9907-b70a04acb03e",
+          "assignment_id": "6edc54bf-3f9c-4584-abd1-ced825a2b057",
           "forecast_score": 85.0,
           "is_placeholder": true
         }
       ],
+      "course_id": "8e6acbb3-9de5-4e50-a519-5cd8062272dd",
       "projected": {
         "letter": "B+",
         "percent": 89.0
@@ -147,5 +147,5 @@
       "grading_mode": "weighted"
     }
   ],
-  "computed_at": "2026-09-29T11:56:26.322445+00:00"
+  "computed_at": "2026-10-03T02:58:03.554356+00:00"
 }

@@ -102,16 +102,22 @@ describe('gradesApi', () => {
     expect(calc.semesters).toEqual([
       { semester: 1, label: 'Midterm', examWeight: 20, currentPercent: 90, projectedPercent: 89 },
     ]);
-    expect(calc.forecasts.map((f) => f.title).sort()).toEqual([
+    expect(calc.ungraded.map((f) => f.title).sort()).toEqual([
       'Quiz 2.2',
       'Semester 1 Midterm Exam',
       'Unit 3 Test: Integrals',
     ]);
-    expect(calc.forecasts.find((f) => f.title === 'Quiz 2.2')).toMatchObject({
+    expect(calc.ungraded.find((f) => f.title === 'Quiz 2.2')).toMatchObject({
       maxScore: 10,
       forecastScore: 9,
       isPlaceholder: false,
     });
+  });
+
+  it('loadSampleGradebook calls the sample loader', async () => {
+    const { api, call } = apiReturning(null);
+    await api.loadSampleGradebook();
+    expect(call).toHaveBeenCalledWith('load_sample_gradebook');
   });
 
   it('getCourseGrades asks for one course', async () => {

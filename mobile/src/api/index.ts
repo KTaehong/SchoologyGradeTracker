@@ -10,8 +10,16 @@ import { getSupabase } from './client';
 import { createGradesApi } from './grades';
 import { createRpcCaller } from './rpc';
 
-export { getSession, onSessionChange, signInWithEmail, signOut, signUpWithEmail } from './auth';
-export type { Session, SignUp } from './auth';
+export {
+  getSession,
+  oauthRedirectUrl,
+  onSessionChange,
+  signInWithEmail,
+  signInWithProvider,
+  signOut,
+  signUpWithEmail,
+} from './auth';
+export type { OAuthProvider, Session, SignUp } from './auth';
 export { getSupabase, isApiConfigured } from './client';
 export { ApiError } from './errors';
 export type { ApiErrorKind } from './errors';
@@ -24,10 +32,10 @@ export type {
   GradesSnapshot,
   LetterGrade,
   NewForecast,
-  PendingForecast,
   PeriodGrades,
   PeriodKind,
   SemesterGrades,
+  UngradedAssignment,
 } from './grades';
 export { useSession } from './use-session';
 export type { SessionState } from './use-session';

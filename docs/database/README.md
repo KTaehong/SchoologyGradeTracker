@@ -464,14 +464,15 @@ a forecast change without a second request:
   "semesters": [
     { "semester": 1, "label": "Midterm", "exam_weight": 20,
       "current_percent": 90.00, "projected_percent": 89.00 } ],
-  "forecasts": [
+  "ungraded": [
     { "assignment_id": "…", "period_id": "…", "category_id": "…", "title": "Quiz 2.2",
       "due_date": "2026-09-27", "max_score": 10, "forecast_score": 9, "is_placeholder": false } ]
 }
 ```
 
-`null` percents mean nothing is graded yet. `forecasts` lists only forecasts
-still waiting for a real grade. Forecast changes are logged in `score_history`
+`null` percents mean nothing is graded yet. `ungraded` lists the work with no
+actual grade yet (excused work left out), with its forecast or `null`: the
+items the student can forecast. Forecast changes are logged in `score_history`
 like any other score change.
 
 ### Errors
