@@ -55,3 +55,22 @@ export function toApiError(error: PostgrestLikeError): ApiError {
   }
   return new ApiError('server', message, code);
 }
+
+/** A message to show the student for any error an API call can throw. */
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.kind) {
+      case 'not_configured':
+        return 'Cloud sync is not set up in this version of the app.';
+      case 'not_signed_in':
+        return 'Please sign in again.';
+      case 'network':
+        return 'Could not reach the server. Check your internet connection and try again.';
+      case 'not_found':
+        return 'That item no longer exists. It may have been deleted on another device.';
+      default:
+        return error.message;
+    }
+  }
+  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+}

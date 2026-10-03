@@ -21,7 +21,7 @@ export {
 } from './auth';
 export type { OAuthProvider, Session, SignUp } from './auth';
 export { getSupabase, isApiConfigured } from './client';
-export { ApiError } from './errors';
+export { ApiError, errorMessage } from './errors';
 export type { ApiErrorKind } from './errors';
 export type {
   CategoryGrades,
@@ -37,6 +37,8 @@ export type {
   SemesterGrades,
   UngradedAssignment,
 } from './grades';
+export { useApiQuery } from './use-api-query';
+export type { QueryState } from './use-api-query';
 export { useSession } from './use-session';
 export type { SessionState } from './use-session';
 

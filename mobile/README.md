@@ -43,6 +43,11 @@ npm run lint        # ESLint
   `upcoming.tsx`, `settings.tsx`. `course/[id].tsx` is a course's detail screen
   and `add.tsx` is the *Add grades* sheet. `_layout.tsx` files wire up
   navigation and the theme.
+  - Signed in, the Grades tab shows the grades in the account instead, and
+    `cloud-course/[id].tsx` shows a course from the account with its
+    forecasts. `forecast.tsx` adds, changes, or removes a forecast;
+    `sign-in.tsx` signs in or creates an account (opened from Settings);
+    `auth/callback.tsx` is where Google / Apple / Microsoft sign-in returns.
 - `src/components/` — shared UI pieces.
 - `src/lib/coming-soon.ts` — buttons for features that aren't built yet show a
   "Coming soon" message.
@@ -51,7 +56,10 @@ npm run lint        # ESLint
   assignments; *Settings → Data* can reload the demo or erase everything.
 - `src/api/` — the cloud API. `client.ts` makes the one Supabase client, which
   keeps the sign-in session in secure storage and sends the token with every
-  request; `auth.ts` signs in and out; `grades.ts` is the grade engine API
-  (grades snapshot, add/set/remove forecasts); `use-session.ts` is a hook for
-  the sign-in state.
+  request; `auth.ts` signs in and out (email, Google, Apple, Microsoft);
+  `grades.ts` is the grade engine API (grades snapshot, add/set/remove
+  forecasts, load sample grades); `use-session.ts` is a hook for the sign-in
+  state and `use-api-query.ts` loads API data when a screen opens.
+- `src/lib/forecast-form.ts` checks the forecast form; `format-grade.ts`
+  formats percents and points.
 - `src/theme/` — colors and the light/dark/system theme setting.

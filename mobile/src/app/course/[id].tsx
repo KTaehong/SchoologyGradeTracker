@@ -1,9 +1,10 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { Loading } from '@/components/loading';
+import { PeriodPicker } from '@/components/period-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Row, Section } from '@/components/ui';
@@ -11,7 +12,6 @@ import { useGradebook } from '@/data/gradebook-store';
 import { type Assignment, type Category } from '@/data/types';
 import { comingSoon } from '@/lib/coming-soon';
 import { Radius, Spacing } from '@/theme/colors';
-import { useTheme } from '@/theme/theme-preference';
 
 export default function CourseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -80,38 +80,6 @@ export default function CourseScreen() {
   );
 }
 
-function PeriodPicker({
-  names,
-  selected,
-  onSelect,
-}: {
-  names: string[];
-  selected: number;
-  onSelect: (index: number) => void;
-}) {
-  const colors = useTheme();
-  return (
-    <View style={styles.periods} accessibilityRole="tablist">
-      {names.map((name, index) => {
-        const isSelected = index === selected;
-        return (
-          <Pressable
-            key={name}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isSelected }}
-            onPress={() => onSelect(index)}
-            style={[
-              styles.period,
-              { backgroundColor: isSelected ? colors.accent : colors.backgroundSelected },
-            ]}>
-            <ThemedText style={{ color: isSelected ? colors.onAccent : colors.text }}>{name}</ThemedText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 function CategorySection({ category }: { category: Category }) {
   const title =
     category.weight === null ? category.name : `${category.name} · ${category.weight}%`;
@@ -161,14 +129,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
-  },
-  periods: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  period: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.large,
   },
 });

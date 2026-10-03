@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
+import { errorMessage, gradesApi, useApiQuery, useSession, type CourseGrades } from '@/api';
 import { EmptyState } from '@/components/empty-state';
 import { HeaderButton } from '@/components/header-button';
 import { Loading } from '@/components/loading';
@@ -10,9 +12,93 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { type Course } from '@/data/types';
+import { formatGrade } from '@/lib/format-grade';
 import { Radius, Spacing } from '@/theme/colors';
 
 export default function GradesScreen() {
+  const session = useSession();
+  if (session.status === 'loading') {
+    return (
+      <Screen title="Grades">
+        <Loading />
+      </Screen>
+    );
+  }
+  return session.status === 'signed_in' ? <AccountGrades /> : <PhoneGrades />;
+}
+
+/** Signed in: the grades saved in the student's account, computed by the server. */
+function AccountGrades() {
+  const { state, reload } = useApiQuery(() => gradesApi.getGrades(), 'grades');
+  const [loadingSample, setLoadingSample] = useState(false);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+
+  const loadSample = async () => {
+    setLoadingSample(true);
+    setSampleError(null);
+    try {
+      await gradesApi.loadSampleGradebook();
+      await reload();
+    } catch (e) {
+      setSampleError(errorMessage(e));
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
+  return (
+    <Screen title="Grades">
+      <ThemedText type="small" themeColor="textSecondary">
+        Showing the grades in your account. Projected grades include your forecasts.
+      </ThemedText>
+      {state.status === 'loading' ? (
+        <Loading />
+      ) : state.status === 'error' ? (
+        <>
+          <EmptyState title="Could not load grades" message={errorMessage(state.error)} />
+          <Button label="Try again" onPress={reload} />
+        </>
+      ) : state.data.courses.length === 0 ? (
+        <>
+          <EmptyState
+            title="No courses in your account yet"
+            message="Load the sample grades to try forecasts. Syncing this phone's grades comes in a later update."
+          />
+          {sampleError ? <ThemedText themeColor="danger">{sampleError}</ThemedText> : null}
+          <Button
+            label={loadingSample ? 'Loading…' : 'Load sample grades'}
+            variant="primary"
+            disabled={loadingSample}
+            onPress={loadSample}
+          />
+        </>
+      ) : (
+        state.data.courses.map((course) => <AccountCourseCard key={course.courseId} course={course} />)
+      )}
+    </Screen>
+  );
+}
+
+function AccountCourseCard({ course }: { course: CourseGrades }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/cloud-course/[id]', params: { id: course.courseId } })}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <ThemedText type="subtitle">{course.name}</ThemedText>
+        {course.teacher ? <ThemedText themeColor="textSecondary">{course.teacher}</ThemedText> : null}
+        <ThemedText>Current: {formatGrade(course.current)}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          Projected: {formatGrade(course.projected)}
+        </ThemedText>
+      </ThemedView>
+    </Pressable>
+  );
+}
+
+/** Signed out: the gradebook saved on this phone (F13). */
+function PhoneGrades() {
   const { state } = useGradebook();
   const openAdd = () => router.push('/add');
 

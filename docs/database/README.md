@@ -352,6 +352,18 @@ but is not a relational SQL database.
 - **Google**, **Apple**, **Azure (Microsoft)** — each needs a client ID and
   secret from that company's developer console. Supabase's page for each
   provider links to the steps.
+  - Google: Google Cloud Console → APIs & Services → Credentials → OAuth client
+    ID (type *Web application*), with Supabase's callback URL as the redirect URI.
+  - Apple: needs a paid Apple Developer account (Services ID + key).
+  - Microsoft: Azure portal → App registrations, with Supabase's callback URL
+    as the redirect URI. The app asks for the `email` scope.
+
+The app opens these sign-ins in an in-app browser and must be allowed back in.
+Under **Authentication → URL Configuration → Redirect URLs**, add:
+- `gradetracker://auth/callback` (installed builds), and
+- `exp://**` (while testing in Expo Go).
+
+Each "Continue with …" button shows an error until its provider is turned on.
 
 ### Load the sample data
 In **SQL Editor**, paste and **Run** [`supabase/seed.sql`](../../supabase/seed.sql).

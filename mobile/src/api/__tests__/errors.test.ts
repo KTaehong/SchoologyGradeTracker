@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { readApiConfig } from '../config';
-import { ApiError, toApiError } from '../errors';
+import { ApiError, errorMessage, toApiError } from '../errors';
 
 describe('toApiError', () => {
   it.each([
@@ -39,5 +39,16 @@ describe('readApiConfig', () => {
         EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon',
       }),
     ).toEqual({ url: 'https://x.supabase.co', anonKey: 'anon' });
+  });
+});
+
+describe('errorMessage', () => {
+  it('explains each kind in plain words', () => {
+    expect(errorMessage(new ApiError('network', 'TypeError: Network request failed'))).toContain(
+      'internet',
+    );
+    expect(errorMessage(new ApiError('invalid_input', 'Title is required'))).toBe('Title is required');
+    expect(errorMessage(new Error('boom'))).toBe('boom');
+    expect(errorMessage('weird')).toContain('Something went wrong');
   });
 });

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, TextInput, View, type TextInputProps } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -112,26 +112,52 @@ export function SwitchRow({
   );
 }
 
+/** A labeled text box. */
+export function TextField({ label, style, ...inputProps }: { label: string } & TextInputProps) {
+  const colors = useTheme();
+  return (
+    <View style={styles.field}>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+      <TextInput
+        accessibilityLabel={label}
+        placeholderTextColor={colors.textSecondary}
+        style={[
+          styles.input,
+          { color: colors.text, backgroundColor: colors.backgroundElement },
+          style,
+        ]}
+        {...inputProps}
+      />
+    </View>
+  );
+}
+
 /** A full-width button. `primary` is filled with the accent color. */
 export function Button({
   label,
   onPress,
   variant = 'secondary',
+  disabled = false,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary';
+  disabled?: boolean;
 }) {
   const colors = useTheme();
   const primary = variant === 'primary';
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
         { backgroundColor: primary ? colors.accent : colors.backgroundSelected },
-        pressed && styles.pressed,
+        (pressed || disabled) && styles.pressed,
       ]}>
       <ThemedText style={{ color: primary ? colors.onAccent : colors.text }}>{label}</ThemedText>
     </Pressable>
@@ -164,6 +190,15 @@ const styles = StyleSheet.create({
   rowText: {
     flex: 1,
     gap: 2,
+  },
+  field: {
+    gap: Spacing.one,
+  },
+  input: {
+    fontSize: 16,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.small,
   },
   button: {
     alignItems: 'center',
