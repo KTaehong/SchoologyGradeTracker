@@ -1,0 +1,126 @@
+
+> schoology-grade-tracker@1.0.0 typecheck
+> tsc --noEmit
+
+PASS src/api/__tests__/oauth-callback.test.ts
+  parseOAuthCallback
+    √ reads the one-time code (17 ms)
+    √ works with Expo Go links (1 ms)
+    √ reports a provider error from the query or the fragment (1 ms)
+    √ treats a link with neither as unfinished (1 ms)
+
+PASS src/data/__tests__/storage.test.ts
+  gradebook storage
+    √ reports missing on first launch (24 ms)
+    √ round-trips a saved gradebook unchanged (10 ms)
+    √ keeps an erased (empty) gradebook as loaded, not missing (2 ms)
+    √ reports invalid for damaged JSON (1 ms)
+    √ reports invalid for JSON of the wrong shape (1 ms)
+  theme preference storage
+    √ is null until something is saved (1 ms)
+    √ round-trips a saved preference (1 ms)
+    √ ignores unknown saved values (1 ms)
+
+PASS src/data/__tests__/demo.test.ts
+  createDemoGradebook
+    √ is a valid gradebook with courses and upcoming items (18 ms)
+    √ uses unique ids everywhere (1 ms)
+    √ gives weighted courses category weights that add up to 100 in every period (7 ms)
+    √ leaves category weights empty in points-based courses (2 ms)
+    √ includes the edge cases the grade engine must handle (1 ms)
+    √ dates graded work in the past and upcoming items in the future (9 ms)
+    √ links every upcoming item to a real course or to none (2 ms)
+
+PASS src/api/__tests__/errors.test.ts
+  toApiError
+    √ maps SQLSTATE 28000 to not_signed_in (15 ms)
+    √ maps SQLSTATE PGRST301 to not_signed_in (1 ms)
+    √ maps SQLSTATE PGRST303 to not_signed_in (1 ms)
+    √ maps SQLSTATE 42501 to forbidden (1 ms)
+    √ maps SQLSTATE P0002 to not_found (1 ms)
+    √ maps SQLSTATE 22023 to invalid_input (3 ms)
+    √ maps SQLSTATE 23514 to invalid_input (1 ms)
+    √ maps SQLSTATE 23503 to server (1 ms)
+    √ maps SQLSTATE XX000 to server (1 ms)
+    √ recognizes a failed request as a network error (1 ms)
+  readApiConfig
+    √ needs both the URL and the anon key (2 ms)
+  errorMessage
+    √ explains each kind in plain words (1 ms)
+
+PASS src/api/__tests__/grades.test.ts
+  createRpcCaller
+    √ does not call the server when no one is signed in (22 ms)
+    √ passes the function name and arguments through (2 ms)
+    √ turns server errors into ApiErrors (2 ms)
+    √ rejects (instead of throwing) when the API is not configured (2 ms)
+  gradesApi
+    √ getGrades maps the snapshot to app types (9 ms)
+    √ loadSampleGradebook calls the sample loader (1 ms)
+    √ getCourseGrades asks for one course (1 ms)
+    √ addForecast sends the new item and returns the updated course (2 ms)
+    √ setForecast sends the assignment and score (1 ms)
+    √ removeForecast handles a deleted placeholder (1 ms)
+
+PASS src/api/__tests__/secure-session-storage.test.ts
+  secure session storage
+    √ returns null when nothing is saved (17 ms)
+    √ round-trips a session larger than one SecureStore value (2 ms)
+    √ round-trips an empty string
+    √ deletes leftover chunks when a value gets shorter (2 ms)
+    √ removes every chunk (1 ms)
+    √ treats a half-written session as signed out
+    √ replaces characters SecureStore does not allow in keys (1 ms)
+
+PASS src/data/__tests__/upcoming.test.ts
+  groupUpcomingByDay
+    √ groups by local day, soonest first, and drops items before today (16 ms)
+    √ returns nothing for an empty agenda (1 ms)
+  formatDayLabel
+    √ names today and tomorrow (1 ms)
+    √ uses a short date further out (38 ms)
+
+PASS src/lib/__tests__/forecast-form.test.ts
+  parseScore
+    √ reads "8" as 8 (16 ms)
+    √ reads " 8.5 " as 8.5 (1 ms)
+    √ reads "8,5" as 8.5 (1 ms)
+    √ reads ".5" as 0.5
+    √ reads "0" as 0 (1 ms)
+    √ rejects "" (1 ms)
+    √ rejects "abc"
+    √ rejects "-1" (1 ms)
+    √ rejects "8."
+    √ rejects "1e3" (1 ms)
+    √ rejects "8 points"
+  validateForecastScore
+    √ accepts a number and explains a bad one (2 ms)
+  validateNewForecast
+    √ builds the request (4 ms)
+    √ rejects {"categoryId": null} (1 ms)
+    √ rejects {"title": "  "}
+    √ rejects {"maxScore": "0"}
+    √ rejects {"maxScore": "ten"} (1 ms)
+    √ rejects {"forecastScore": ""} (3 ms)
+    √ rejects {"dueDate": "11/20/2026"} (1 ms)
+    √ rejects {"dueDate": "2026-02-30"} (1 ms)
+  grade formatting
+    √ formats percents, letters, and points (1 ms)
+
+PASS src/data/__tests__/initial-gradebook.test.ts
+  resolveInitialGradebook
+    √ seeds the demo gradebook on first launch and saves it (20 ms)
+    √ keeps an erased gradebook empty instead of re-seeding the demo (2 ms)
+    √ replaces a damaged save with the demo gradebook (1 ms)
+
+PASS src/api/__tests__/index.test.ts (10.873 s)
+  the API without configuration
+    √ reports that it is not configured (6 ms)
+    √ is signed out, and signing out is harmless (1 ms)
+    √ rejects grade calls with not_configured (1 ms)
+
+Test Suites: 10 passed, 10 total
+Tests:       79 passed, 79 total
+Snapshots:   0 total
+Time:        14.512 s, estimated 29 s
+Ran all test suites.
