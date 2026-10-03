@@ -7,7 +7,8 @@ every student's data private to them.
 - **Host:** [Supabase](https://supabase.com) — managed PostgreSQL you can query
   with SQL, with built-in sign-in (email, phone, Google, Apple, Microsoft).
 - **SQL:** [`supabase/migrations/`](../../supabase/migrations/) (run in order).
-- **Tests:** [`supabase/tests/gradebook_test.sql`](../../supabase/tests/gradebook_test.sql).
+- **Tests:** [`supabase/tests/gradebook_test.sql`](../../supabase/tests/gradebook_test.sql)
+  and [`grade_api_test.sql`](../../supabase/tests/grade_api_test.sql).
 - **Sample data:** [`supabase/seed.sql`](../../supabase/seed.sql).
 - **Class demo queries:** [`demo.sql`](demo.sql).
 
@@ -39,6 +40,7 @@ Feature IDs (F01–F14) refer to [`../mvp.md`](../mvp.md).
 | 18 | **Settings**: theme, sync on/off, default exam weight | F01, F10, F12 | `user_settings` |
 | 19 | **Sync bookkeeping**: which device pushed last | F14 | `sync_state`, `user_devices.last_synced_at` |
 | 20 | **Sample gradebook** to explore the app | F01 | `load_sample_gradebook()` |
+| 21 | **Grade engine API**: grades snapshot and manual forecasts over HTTP | F02, F03, F08, F14 | `get_grades()`, `add_forecast()`, `set_forecast()`, `remove_forecast()` |
 
 ---
 
@@ -299,6 +301,10 @@ when appropriate.
 `semester_grades`, `letter_for`, `required_score`, `record_actual_score`,
 `load_sample_gradebook`.
 
+**API functions** (signed-in students only, see section 6): `get_grades`,
+`add_forecast`, `set_forecast`, `remove_forecast`, plus the helpers
+`course_grade_snapshot` and `require_student`.
+
 ---
 
 ## 5. Hosting on Supabase
@@ -326,9 +332,11 @@ but is not a relational SQL database.
    2. `20260924000200_gradebook.sql`
    3. `20260924000300_grade_engine.sql`
    4. `20260924000400_sample_gradebook.sql`
+   5. `20260929000500_grade_api.sql`
 3. Check it: paste and run
-   [`supabase/tests/gradebook_test.sql`](../../supabase/tests/gradebook_test.sql).
-   It creates two test students, checks the grade math, forecasts, and
+   [`supabase/tests/gradebook_test.sql`](../../supabase/tests/gradebook_test.sql),
+   then [`grade_api_test.sql`](../../supabase/tests/grade_api_test.sql).
+   Each creates two test students, checks the grade math, forecasts, and
    privacy rules, then **rolls back**, so nothing is left behind. If it ends
    with **Success**, every check passed; a failed check stops with an error
    that starts with `FAILED:`.
@@ -344,6 +352,18 @@ but is not a relational SQL database.
 - **Google**, **Apple**, **Azure (Microsoft)** — each needs a client ID and
   secret from that company's developer console. Supabase's page for each
   provider links to the steps.
+  - Google: Google Cloud Console → APIs & Services → Credentials → OAuth client
+    ID (type *Web application*), with Supabase's callback URL as the redirect URI.
+  - Apple: needs a paid Apple Developer account (Services ID + key).
+  - Microsoft: Azure portal → App registrations, with Supabase's callback URL
+    as the redirect URI. The app asks for the `email` scope.
+
+The app opens these sign-ins in an in-app browser and must be allowed back in.
+Under **Authentication → URL Configuration → Redirect URLs**, add:
+- `gradetracker://auth/callback` (installed builds), and
+- `exp://**` (while testing in Expo Go).
+
+Each "Continue with …" button shows an error until its provider is turned on.
 
 ### Load the sample data
 In **SQL Editor**, paste and **Run** [`supabase/seed.sql`](../../supabase/seed.sql).
@@ -390,13 +410,99 @@ student's rows. The app, signed in as one student, sees only that student's rows
 - Run query 3.4 once, so that the live change starts from the forecast.
 - Make sure the school network allows supabase.com, or use a phone hotspot.
 
-### Connecting the app later (T3.4)
+### Connecting the app (T3.4)
 The app needs the **Project URL** and the **anon public key** from
-**Project Settings → API**. The anon key is safe in the app because RLS protects
-the data. Never put the **service_role** key or the database password in the
-app or in this repository.
+**Project Settings → API**. Put them in `mobile/.env.local` (copy
+[`mobile/.env.example`](../../mobile/.env.example)). The anon key is safe in the
+app because RLS protects the data. Never put the **service_role** key or the
+database password in the app or in this repository.
 
 ### Running the tests locally (optional)
 With PostgreSQL 15+ installed: `supabase/tests/run_local.sh`. It creates a
 scratch database, adds a small stand-in for Supabase's `auth` schema, applies
-the migrations, runs the tests, loads the seed twice, and runs `demo.sql`.
+the migrations, runs both test files, loads the seed twice, and runs `demo.sql`.
+
+---
+
+## 6. Grade engine API
+
+Supabase publishes every function in `public` as an HTTP endpoint,
+`POST {Project URL}/rest/v1/rpc/<name>`, with the arguments as a JSON body.
+The app calls them through [`mobile/src/api/`](../../mobile/src/api/)
+(`gradesApi.getGrades()`, …), which wraps `supabase.rpc(...)`.
+
+### Authentication
+None of the endpoints take a user id or a token as an argument. The caller is
+whoever the `Authorization: Bearer <access token>` header names:
+
+1. The student signs in with Supabase Auth (`signInWithEmail` in
+   `mobile/src/api/auth.ts`; Google / Apple / Microsoft later use the same client).
+2. supabase-js saves the session in the phone's secure storage (Keychain /
+   Keystore, split into chunks because a session is larger than one secure
+   value), refreshes the access token before it expires, and adds the header
+   to **every** request on its own.
+3. In SQL, `auth.uid()` reads the student id from that token. The functions run
+   as the caller (SECURITY INVOKER), so row-level security limits them to the
+   student's own rows.
+
+So a new endpoint only needs `perform public.require_student();` at the top,
+and a new app call only needs `call('<function>', { args })` in
+`mobile/src/api/grades.ts`. Nothing handles tokens by hand. `anon` cannot
+execute the API functions at all.
+
+### Endpoints
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `get_grades` | `p_course_id` (optional) | `{ computed_at, courses: [course] }`. Every active course, or just the one asked for. |
+| `add_forecast` | `p_category_id`, `p_title`, `p_max_score`, `p_forecast_score`, `p_due_date` (optional) | `{ assignment, course }`. Adds a placeholder assignment: a forecast for work not in Schoology yet. |
+| `set_forecast` | `p_assignment_id`, `p_forecast_score` | `{ assignment, course }`. Sets or changes the forecast on any assignment. |
+| `remove_forecast` | `p_assignment_id` | `{ assignment, course }`. Deletes a placeholder (`assignment` is `null`), or clears the forecast on a real assignment. |
+
+Each `course` in a reply has the same shape, so the app can redraw right after
+a forecast change without a second request:
+
+```json
+{
+  "course_id": "…", "name": "AP Calculus BC", "teacher": "Ms. Rivera", "grading_mode": "weighted",
+  "current":   { "percent": 90.00, "letter": "A-" },
+  "projected": { "percent": 89.00, "letter": "B+" },
+  "periods": [
+    { "period_id": "…", "name": "Q1", "kind": "quarter", "semester": 1, "weight": null,
+      "current_percent": 90.00, "projected_percent": 90.00,
+      "categories": [
+        { "category_id": "…", "name": "Tests", "weight": 50, "drop_lowest": 0,
+          "current_percent": 90.00, "projected_percent": 90.00 } ] } ],
+  "semesters": [
+    { "semester": 1, "label": "Midterm", "exam_weight": 20,
+      "current_percent": 90.00, "projected_percent": 89.00 } ],
+  "ungraded": [
+    { "assignment_id": "…", "period_id": "…", "category_id": "…", "title": "Quiz 2.2",
+      "due_date": "2026-09-27", "max_score": 10, "forecast_score": 9, "is_placeholder": false } ]
+}
+```
+
+`null` percents mean nothing is graded yet. `ungraded` lists the work with no
+actual grade yet (excused work left out), with its forecast or `null`: the
+items the student can forecast. Forecast changes are logged in `score_history`
+like any other score change.
+
+### Errors
+
+| SQLSTATE | HTTP | `ApiError.kind` in the app | When |
+|---|---|---|---|
+| `28000` | 403 | `not_signed_in` | No signed-in student. |
+| `P0002` | 404 | `not_found` | The course, category, or assignment does not exist or belongs to someone else. |
+| `22023` | 400 | `invalid_input` | Blank title, points possible ≤ 0, negative forecast. |
+
+### Try it without the app
+```bash
+curl "$SUPABASE_URL/rest/v1/rpc/get_grades" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" -d '{}'
+```
+`ACCESS_TOKEN` is the `access_token` from a signed-in session. In the SQL
+editor, act as a student first:
+`set local role authenticated; set local request.jwt.claims = '{"sub": "<student uuid>"}';`
+(inside `begin; … rollback;`).

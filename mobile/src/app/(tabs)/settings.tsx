@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { isApiConfigured, signOut, useSession } from '@/api';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Row, Section, SwitchRow } from '@/components/ui';
@@ -42,8 +44,7 @@ export default function SettingsScreen() {
           value={false}
           onValueChange={() => comingSoon('Cloud sync')}
         />
-        <Row label="Create account" onPress={() => comingSoon('Creating an account')} />
-        <Row label="Sign in" onPress={() => comingSoon('Signing in')} />
+        <AccountRows />
       </Section>
 
       <Section title="Data" footer="Your grades are saved on this phone and work without internet.">
@@ -78,6 +79,46 @@ export default function SettingsScreen() {
         <Row label="Version" right={<ThemedText themeColor="textSecondary">{appVersion()}</ThemedText>} />
       </Section>
     </Screen>
+  );
+}
+
+function AccountRows() {
+  const session = useSession();
+
+  if (!isApiConfigured()) {
+    return <Row label="Account" detail="Not available in this version of the app." />;
+  }
+  if (session.status === 'loading') {
+    return <Row label="Account" detail="Checking…" />;
+  }
+  if (session.status === 'signed_in') {
+    const user = session.session.user;
+    return (
+      <>
+        <Row label="Signed in" detail={user.email ?? user.phone ?? 'Account'} />
+        <Row
+          label="Sign out"
+          destructive
+          onPress={() =>
+            confirmAction(
+              'Sign out?',
+              'Grades saved on this phone stay here. Your account keeps its grades and forecasts.',
+              'Sign out',
+              signOut,
+            )
+          }
+        />
+      </>
+    );
+  }
+  return (
+    <>
+      <Row
+        label="Create account"
+        onPress={() => router.push({ pathname: '/sign-in', params: { mode: 'sign-up' } })}
+      />
+      <Row label="Sign in" onPress={() => router.push('/sign-in')} />
+    </>
   );
 }
 
