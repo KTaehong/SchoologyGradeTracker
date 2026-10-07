@@ -2,12 +2,13 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { isApiConfigured, signOut, useSession } from '@/api';
+import { isApiConfigured, useSession } from '@/api';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Row, Section, SwitchRow } from '@/components/ui';
+import { Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { comingSoon, confirmAction } from '@/lib/coming-soon';
+import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
 import { type ThemePreference, useTheme, useThemePreference } from '@/theme/theme-preference';
 
@@ -18,7 +19,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { loadDemo, eraseAll } = useGradebook();
+  const { loadSample, eraseAll, sync } = useGradebook();
 
   return (
     <Screen title="Settings">
@@ -37,35 +38,22 @@ export default function SettingsScreen() {
       </Section>
 
       <Section
-        title="Cloud sync (beta)"
-        footer="Off by default. Sync keeps your grades when you reinstall and brings them to your other devices.">
-        <SwitchRow
-          label="Sync this phone"
-          value={false}
-          onValueChange={() => comingSoon('Cloud sync')}
-        />
+        title="Account & sync"
+        footer="Signed in, your grades sync to your other devices and are kept if you reinstall. Signed out, they stay on this phone only.">
         <AccountRows />
       </Section>
 
       <Section title="Data" footer="Your grades are saved on this phone and work without internet.">
-        <Row
-          label="Load demo grades"
-          onPress={() =>
-            confirmAction(
-              'Load demo grades?',
-              'This replaces everything in the app with sample courses and assignments.',
-              'Load demo',
-              loadDemo,
-            )
-          }
-        />
+        <Row label="Add sample grades" detail="Five example courses to explore." onPress={loadSample} />
         <Row
           label="Erase all data"
           destructive
           onPress={() =>
             confirmAction(
               'Erase all data?',
-              'This removes every course and assignment from this phone.',
+              sync
+                ? 'This removes every course and assignment from your account, on every device.'
+                : 'This removes every course and assignment from this phone.',
               'Erase',
               eraseAll,
             )
@@ -74,7 +62,7 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="About">
-        <Row label="Show welcome screen" onPress={() => comingSoon('The welcome screen')} />
+        <Row label="Show welcome screen" onPress={() => router.push('/welcome')} />
         <Row label="Privacy" onPress={() => comingSoon('The privacy page')} />
         <Row label="Version" right={<ThemedText themeColor="textSecondary">{appVersion()}</ThemedText>} />
       </Section>
@@ -84,6 +72,7 @@ export default function SettingsScreen() {
 
 function AccountRows() {
   const session = useSession();
+  const { sync, online, syncNow, signOut } = useGradebook();
 
   if (!isApiConfigured()) {
     return <Row label="Account" detail="Not available in this version of the app." />;
@@ -96,13 +85,16 @@ function AccountRows() {
     return (
       <>
         <Row label="Signed in" detail={user.email ?? user.phone ?? 'Account'} />
+        <Row label="Sync now" detail={syncLabel(sync, online)} onPress={syncNow} />
         <Row
           label="Sign out"
           destructive
           onPress={() =>
             confirmAction(
               'Sign out?',
-              'Grades saved on this phone stay here. Your account keeps its grades and forecasts.',
+              sync && sync.pending > 0
+                ? `${sync.pending} ${sync.pending === 1 ? 'change has' : 'changes have'} not reached the cloud yet. Signing out tries once more, then removes this phone's copy — unsent changes would be lost.`
+                : "Your account keeps its grades and forecasts. This phone's copy is removed until you sign in again.",
               'Sign out',
               signOut,
             )

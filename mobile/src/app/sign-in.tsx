@@ -14,15 +14,10 @@ import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
+import { signInProviders } from '@/lib/sign-in-providers';
 import { Spacing } from '@/theme/colors';
 
-const PROVIDERS: { provider: OAuthProvider; label: string }[] = [
-  { provider: 'apple', label: 'Continue with Apple' },
-  { provider: 'google', label: 'Continue with Google' },
-  { provider: 'azure', label: 'Continue with Microsoft' },
-];
-
-/** Sign in or create an account for cloud sync (F14). Opened from Settings. */
+/** Sign in or create an account for cloud sync (F14). Opened from Welcome or Settings. */
 export default function SignInScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>(
@@ -114,7 +109,7 @@ export default function SignInScreen() {
             never needed.
           </ThemedText>
 
-          {PROVIDERS.map(({ provider, label }) => (
+          {signInProviders(Platform.OS).map(({ provider, label }) => (
             <Button
               key={provider}
               label={label}

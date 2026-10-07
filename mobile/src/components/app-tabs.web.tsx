@@ -19,7 +19,8 @@ export default function AppTabs() {
         tabBarIconStyle: { display: 'none' },
         tabBarLabelStyle: { fontSize: 14 },
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Grades' }} />
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="grades" options={{ title: 'Grades' }} />
       <Tabs.Screen name="upcoming" options={{ title: 'Upcoming' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
     </Tabs>

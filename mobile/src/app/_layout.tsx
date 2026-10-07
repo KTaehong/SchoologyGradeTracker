@@ -24,10 +24,10 @@ function ThemedNavigation() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
         <Stack.Screen name="add" options={{ title: 'Add grades', presentation: 'modal' }} />
-        <Stack.Screen name="cloud-course/[id]" options={{ title: 'Course' }} />
         <Stack.Screen name="forecast" options={{ title: 'Forecast', presentation: 'modal' }} />
         <Stack.Screen name="sign-in" options={{ title: 'Account', presentation: 'modal' }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="welcome" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </ThemeProvider>
   );

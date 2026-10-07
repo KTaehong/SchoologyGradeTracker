@@ -2,13 +2,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 
-import { errorMessage, gradesApi, useApiQuery, type CourseGrades } from '@/api';
+import { errorMessage, type CourseGrades } from '@/api';
 import { EmptyState } from '@/components/empty-state';
 import { Loading } from '@/components/loading';
 import { PeriodPicker } from '@/components/period-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
+import { useCourseGrades, useGradebook } from '@/data/gradebook-store';
 import { validateForecastScore, validateNewForecast } from '@/lib/forecast-form';
 import { Spacing } from '@/theme/colors';
 
@@ -23,7 +24,7 @@ type Params = {
   isPlaceholder?: string;
 };
 
-/** Add, change, or remove a forecast (F08). Saved to the student's account. */
+/** Add, change, or remove a forecast (F08). Saved on this phone, then synced when signed in. */
 export default function ForecastScreen() {
   const params = useLocalSearchParams<Params>();
   return (
@@ -63,6 +64,7 @@ function useSave() {
 
 function EditForecast({ params }: { params: Params & { assignmentId: string } }) {
   const [score, setScore] = useState(params.forecastScore ?? '');
+  const { setForecast, removeForecast } = useGradebook();
   const { busy, error, setError, save } = useSave();
   const hasForecast = Boolean(params.forecastScore);
   const placeholder = params.isPlaceholder === '1';
@@ -73,7 +75,7 @@ function EditForecast({ params }: { params: Params & { assignmentId: string } })
       setError(result.error);
       return;
     }
-    save(() => gradesApi.setForecast(params.assignmentId, result.value));
+    save(() => setForecast(params.assignmentId, result.value));
   };
 
   return (
@@ -103,7 +105,7 @@ function EditForecast({ params }: { params: Params & { assignmentId: string } })
         <Button
           label={placeholder ? 'Delete this forecast' : 'Clear forecast'}
           disabled={busy}
-          onPress={() => save(() => gradesApi.removeForecast(params.assignmentId))}
+          onPress={() => save(() => removeForecast(params.assignmentId))}
         />
       ) : null}
     </>
@@ -111,20 +113,16 @@ function EditForecast({ params }: { params: Params & { assignmentId: string } })
 }
 
 function NewForecast({ courseId }: { courseId: string }) {
-  const { state, reload } = useApiQuery(() => gradesApi.getCourseGrades(courseId), `course:${courseId}`);
+  const { state } = useGradebook();
+  const course = useCourseGrades(courseId);
 
   if (state.status === 'loading') {
     return <Loading />;
   }
-  if (state.status === 'error') {
-    return (
-      <>
-        <EmptyState title="Could not load this course" message={errorMessage(state.error)} />
-        <Button label="Try again" onPress={reload} />
-      </>
-    );
+  if (!course) {
+    return <EmptyState title="Course not found" message="It may have been deleted on another device." />;
   }
-  return <NewForecastForm course={state.data} />;
+  return <NewForecastForm course={course} />;
 }
 
 function NewForecastForm({ course }: { course: CourseGrades }) {
@@ -138,6 +136,7 @@ function NewForecastForm({ course }: { course: CourseGrades }) {
   const [maxScore, setMaxScore] = useState('');
   const [forecastScore, setForecastScore] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const { addForecast } = useGradebook();
   const { busy, error, setError, save } = useSave();
 
   const submit = () => {
@@ -152,7 +151,7 @@ function NewForecastForm({ course }: { course: CourseGrades }) {
       setError(result.error);
       return;
     }
-    save(() => gradesApi.addForecast(result.value));
+    save(() => addForecast(result.value));
   };
 
   if (categories.length === 0) {

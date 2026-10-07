@@ -1,52 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { GRADEBOOK_SCHEMA_VERSION, type Gradebook } from './types';
-
-const GRADEBOOK_KEY = 'gradebook.v1';
+/**
+ * Small settings kept in AsyncStorage. The gradebook itself lives in SQLite
+ * (src/db/).
+ */
 const THEME_PREFERENCE_KEY = 'settings.themePreference';
+const WELCOME_SEEN_KEY = 'settings.welcomeSeen';
+/** Where versions before SQLite saved the gradebook, as one JSON blob. */
+export const LEGACY_GRADEBOOK_KEY = 'gradebook.v1';
 
 export type StoredTheme = 'system' | 'light' | 'dark';
-
-/** Minimal shape check so a damaged save can never crash the app. */
-export function isGradebook(value: unknown): value is Gradebook {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const candidate = value as Partial<Gradebook>;
-  return (
-    candidate.schemaVersion === GRADEBOOK_SCHEMA_VERSION &&
-    Array.isArray(candidate.courses) &&
-    Array.isArray(candidate.upcoming) &&
-    typeof candidate.updatedAt === 'string'
-  );
-}
-
-/**
- * Reads the saved gradebook.
- * - `{ kind: 'missing' }` — nothing was ever saved (first launch).
- * - `{ kind: 'invalid' }` — something was saved but can't be read.
- */
-export type LoadResult =
-  | { kind: 'loaded'; gradebook: Gradebook }
-  | { kind: 'missing' }
-  | { kind: 'invalid' };
-
-export async function loadGradebook(): Promise<LoadResult> {
-  const raw = await AsyncStorage.getItem(GRADEBOOK_KEY);
-  if (raw === null) {
-    return { kind: 'missing' };
-  }
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return isGradebook(parsed) ? { kind: 'loaded', gradebook: parsed } : { kind: 'invalid' };
-  } catch {
-    return { kind: 'invalid' };
-  }
-}
-
-export async function saveGradebook(gradebook: Gradebook): Promise<void> {
-  await AsyncStorage.setItem(GRADEBOOK_KEY, JSON.stringify(gradebook));
-}
 
 export async function loadThemePreference(): Promise<StoredTheme | null> {
   const raw = await AsyncStorage.getItem(THEME_PREFERENCE_KEY);
@@ -55,4 +18,35 @@ export async function loadThemePreference(): Promise<StoredTheme | null> {
 
 export async function saveThemePreference(preference: StoredTheme): Promise<void> {
   await AsyncStorage.setItem(THEME_PREFERENCE_KEY, preference);
+}
+
+export async function hasSeenWelcome(): Promise<boolean> {
+  return (await AsyncStorage.getItem(WELCOME_SEEN_KEY)) === '1';
+}
+
+export async function markWelcomeSeen(): Promise<void> {
+  await AsyncStorage.setItem(WELCOME_SEEN_KEY, '1');
+}
+
+/**
+ * The old JSON gradebook, if this phone has one:
+ * `'empty'` when the student had erased everything, `'present'` otherwise.
+ * Before SQLite the app could only show the demo, so there is no real data
+ * to carry over — only whether the student wanted it empty.
+ */
+export async function readLegacyGradebook(): Promise<'missing' | 'empty' | 'present'> {
+  const raw = await AsyncStorage.getItem(LEGACY_GRADEBOOK_KEY);
+  if (raw === null) {
+    return 'missing';
+  }
+  try {
+    const parsed = JSON.parse(raw) as { courses?: unknown[] };
+    return Array.isArray(parsed.courses) && parsed.courses.length === 0 ? 'empty' : 'present';
+  } catch {
+    return 'present';
+  }
+}
+
+export async function removeLegacyGradebook(): Promise<void> {
+  await AsyncStorage.removeItem(LEGACY_GRADEBOOK_KEY);
 }
