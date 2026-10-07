@@ -39,21 +39,26 @@ npm run lint        # ESLint
 
 ## Layout
 
-- `src/app/` — screens. `(tabs)/` holds the three tabs: `index.tsx` (Grades),
-  `upcoming.tsx`, `settings.tsx`. `course/[id].tsx` is a course's detail screen
-  and `add.tsx` is the *Add grades* sheet. `_layout.tsx` files wire up
-  navigation and the theme.
-  - Signed in, the Grades tab shows the grades in the account instead, and
-    `cloud-course/[id].tsx` shows a course from the account with its
-    forecasts. `forecast.tsx` adds, changes, or removes a forecast;
-    `sign-in.tsx` signs in or creates an account (opened from Settings);
-    `auth/callback.tsx` is where Google / Apple / Microsoft sign-in returns.
+- `src/app/` — screens. `welcome.tsx` is shown on first run (sign in, or use
+  the app without an account). `(tabs)/` holds the four tabs: `index.tsx`
+  (Home, the landing page), `grades.tsx`, `upcoming.tsx`, `settings.tsx`.
+  `course/[id].tsx` is a course's detail screen with its forecasts,
+  `forecast.tsx` adds, changes, or removes a forecast, and `add.tsx` is the
+  *Add grades* sheet. `sign-in.tsx` signs in or creates an account;
+  `auth/callback.tsx` is where Google / Apple / Microsoft sign-in returns.
+  `_layout.tsx` files wire up navigation, the theme, and the first-run check.
 - `src/components/` — shared UI pieces.
 - `src/lib/coming-soon.ts` — buttons for features that aren't built yet show a
   "Coming soon" message.
-- `src/data/` — the gradebook model, saving it on the phone, and the demo
-  gradebook. On first launch the app fills itself with demo grades and
-  assignments; *Settings → Data* can reload the demo or erase everything.
+- `src/engine/` — the grade engine (same rules as the server's SQL engine).
+- `src/db/` — the gradebook in SQLite on the phone.
+- `src/sync/` — cloud sync: pull/push, Realtime, connectivity, accounts. How it
+  works: [`docs/sync.md`](../docs/sync.md).
+- `src/data/` — `gradebook-store.tsx` is what every screen reads (local data,
+  computed grades, sync status); `sample-gradebook.ts` is the sample. On first
+  launch the app starts with the sample; *Settings → Data* can add it again or
+  erase everything.
+- `src/test-support/` — test helpers: an in-memory SQLite and a fake sync server.
 - `src/api/` — the cloud API. `client.ts` makes the one Supabase client, which
   keeps the sign-in session in secure storage and sends the token with every
   request; `auth.ts` signs in and out (email, Google, Apple, Microsoft);
