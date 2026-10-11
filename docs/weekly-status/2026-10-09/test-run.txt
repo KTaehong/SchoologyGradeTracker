@@ -1,0 +1,16 @@
+PASS src/api/__tests__/grades.test.ts
+PASS src/data/__tests__/storage.test.ts
+PASS src/lib/__tests__/forecast-form.test.ts
+PASS src/lib/__tests__/greeting.test.ts
+PASS src/api/__tests__/errors.test.ts
+PASS src/api/__tests__/oauth-callback.test.ts
+PASS src/api/__tests__/secure-session-storage.test.ts
+PASS src/data/__tests__/upcoming.test.ts
+PASS src/engine/__tests__/grade-engine.test.ts
+PASS src/sync/__tests__/sync-engine.test.ts
+PASS src/api/__tests__/index.test.ts (6.305 s)
+Test Suites: 13 passed, 13 total
+Tests:       111 passed, 111 total
+Snapshots:   0 total
+Time:        8.542 s, estimated 27 s
+Ran all test suites.
