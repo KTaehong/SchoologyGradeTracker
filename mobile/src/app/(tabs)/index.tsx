@@ -1,153 +1,157 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { errorMessage, gradesApi, useApiQuery, useSession, type CourseGrades } from '@/api';
+import { useSession, type CourseGrades } from '@/api';
 import { EmptyState } from '@/components/empty-state';
-import { HeaderButton } from '@/components/header-button';
 import { Loading } from '@/components/loading';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/ui';
+import { Button, Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
-import { type Course } from '@/data/types';
-import { formatGrade } from '@/lib/format-grade';
+import { formatDayLabel, formatDueTime, groupUpcomingByDay } from '@/data/upcoming';
+import { formatPercent } from '@/lib/format-grade';
+import { greeting, firstName } from '@/lib/greeting';
+import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
 
-export default function GradesScreen() {
+/**
+ * Home: the landing page after sign-in (or after "use without an account").
+ * A glance at every class, what's due next, and what still needs a forecast.
+ */
+export default function HomeScreen() {
+  const { state, sync, online, syncNow, loadSample } = useGradebook();
   const session = useSession();
-  if (session.status === 'loading') {
-    return (
-      <Screen title="Grades">
-        <Loading />
-      </Screen>
-    );
-  }
-  return session.status === 'signed_in' ? <AccountGrades /> : <PhoneGrades />;
-}
-
-/** Signed in: the grades saved in the student's account, computed by the server. */
-function AccountGrades() {
-  const { state, reload } = useApiQuery(() => gradesApi.getGrades(), 'grades');
-  const [loadingSample, setLoadingSample] = useState(false);
-  const [sampleError, setSampleError] = useState<string | null>(null);
-
-  const loadSample = async () => {
-    setLoadingSample(true);
-    setSampleError(null);
-    try {
-      await gradesApi.loadSampleGradebook();
-      await reload();
-    } catch (e) {
-      setSampleError(errorMessage(e));
-    } finally {
-      setLoadingSample(false);
-    }
-  };
+  const user = session.status === 'signed_in' ? session.session.user : null;
+  const name = firstName(user?.user_metadata);
 
   return (
-    <Screen title="Grades">
+    <Screen title={name ? `${greeting()}, ${name}` : greeting()} onRefresh={syncNow}>
       <ThemedText type="small" themeColor="textSecondary">
-        Showing the grades in your account. Projected grades include your forecasts.
+        {syncLabel(sync, online)}
       </ThemedText>
+
       {state.status === 'loading' ? (
         <Loading />
       ) : state.status === 'error' ? (
-        <>
-          <EmptyState title="Could not load grades" message={errorMessage(state.error)} />
-          <Button label="Try again" onPress={reload} />
-        </>
-      ) : state.data.courses.length === 0 ? (
+        <EmptyState title="Could not open your gradebook" message={state.message} />
+      ) : state.grades.length === 0 ? (
         <>
           <EmptyState
-            title="No courses in your account yet"
-            message="Load the sample grades to try forecasts. Syncing this phone's grades comes in a later update."
+            title="Let's add your classes"
+            message="Import your grades from Schoology or type them in. Want to look around first? Load the sample."
           />
-          {sampleError ? <ThemedText themeColor="danger">{sampleError}</ThemedText> : null}
-          <Button
-            label={loadingSample ? 'Loading…' : 'Load sample grades'}
-            variant="primary"
-            disabled={loadingSample}
-            onPress={loadSample}
-          />
+          <Button label="Add grades" variant="primary" onPress={() => router.push('/add')} />
+          <Button label="Load sample grades" onPress={loadSample} />
         </>
       ) : (
-        state.data.courses.map((course) => <AccountCourseCard key={course.courseId} course={course} />)
+        <>
+          <ClassStrip grades={state.grades} />
+          <DueSoon
+            upcoming={state.upcoming}
+            courseNames={new Map(state.grades.map((g) => [g.courseId, g.name]))}
+          />
+          <NeedsForecast grades={state.grades} />
+        </>
       )}
     </Screen>
   );
 }
 
-function AccountCourseCard({ course }: { course: CourseGrades }) {
+/** Every class as a compact tile: letter and percent. */
+function ClassStrip({ grades }: { grades: CourseGrades[] }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/cloud-course/[id]', params: { id: course.courseId } })}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedText type="subtitle">{course.name}</ThemedText>
-        {course.teacher ? <ThemedText themeColor="textSecondary">{course.teacher}</ThemedText> : null}
-        <ThemedText>Current: {formatGrade(course.current)}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Projected: {formatGrade(course.projected)}
-        </ThemedText>
-      </ThemedView>
-    </Pressable>
+    <Section title="Your classes">
+      <View style={styles.tiles}>
+        {grades.map((g) => (
+          <Pressable
+            key={g.courseId}
+            accessibilityRole="button"
+            accessibilityLabel={`${g.name}, ${g.current.letter ?? 'no grade yet'}`}
+            onPress={() => router.push({ pathname: '/course/[id]', params: { id: g.courseId } })}
+            style={({ pressed }) => [styles.tileWrap, pressed && styles.pressed]}>
+            <ThemedView type="backgroundSelected" style={styles.tile}>
+              <ThemedText type="subtitle">{g.current.letter ?? 'N/A'}</ThemedText>
+              <ThemedText type="small" numberOfLines={1}>
+                {g.name}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {formatPercent(g.current.percent)}
+              </ThemedText>
+            </ThemedView>
+          </Pressable>
+        ))}
+      </View>
+    </Section>
   );
 }
 
-/** Signed out: the gradebook saved on this phone (F13). */
-function PhoneGrades() {
-  const { state } = useGradebook();
-  const openAdd = () => router.push('/add');
-
+function DueSoon({
+  upcoming,
+  courseNames,
+}: {
+  upcoming: Parameters<typeof groupUpcomingByDay>[0];
+  courseNames: Map<string, string>;
+}) {
+  const next = groupUpcomingByDay(upcoming)
+    .flatMap((day) => day.items.map((item) => ({ day: day.date, item })))
+    .slice(0, 3);
+  if (next.length === 0) {
+    return null;
+  }
   return (
-    <Screen title="Grades" action={<HeaderButton label="+ Add" onPress={openAdd} />}>
-      {state.status === 'loading' ? (
-        <Loading />
-      ) : state.gradebook.courses.length === 0 ? (
-        <>
-          <EmptyState
-            title="No courses yet"
-            message="Add your grades from a screenshot, a saved Schoology report, or by hand."
-          />
-          <Button label="Add grades" variant="primary" onPress={openAdd} />
-        </>
-      ) : (
-        state.gradebook.courses.map((course) => <CourseCard key={course.id} course={course} />)
-      )}
-    </Screen>
+    <Section title="Due soon">
+      {next.map(({ day, item }) => (
+        <Row
+          key={item.id}
+          label={item.title}
+          detail={`${formatDayLabel(day)} ${formatDueTime(item.dueAt)} · ${
+            (item.courseId && courseNames.get(item.courseId)) || 'Unfiled'
+          }`}
+        />
+      ))}
+      <Row label="See everything due" onPress={() => router.push('/upcoming')} />
+    </Section>
   );
 }
 
-function CourseCard({ course }: { course: Course }) {
-  const assignments = course.periods.flatMap((period) =>
-    period.categories.flatMap((category) => category.assignments),
-  );
-  const graded = assignments.filter((a) => a.score !== null && !a.excused).length;
-
+/** Ungraded work with no forecast yet: forecasting it makes the projection meaningful. */
+function NeedsForecast({ grades }: { grades: CourseGrades[] }) {
+  const missing = grades
+    .map((g) => ({ course: g, count: g.ungraded.filter((u) => u.forecastScore === null).length }))
+    .filter((m) => m.count > 0);
+  if (missing.length === 0) {
+    return null;
+  }
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedText type="subtitle">{course.name}</ThemedText>
-        {course.teacher ? <ThemedText themeColor="textSecondary">{course.teacher}</ThemedText> : null}
-        <ThemedText type="small" themeColor="textSecondary">
-          {graded} graded of {assignments.length} assignments
-        </ThemedText>
-      </ThemedView>
-    </Pressable>
+    <Section title="Needs a forecast" footer="Forecast ungraded work to see where your grade is heading.">
+      {missing.map(({ course, count }) => (
+        <Row
+          key={course.courseId}
+          label={course.name}
+          detail={`${count} ungraded ${count === 1 ? 'item' : 'items'} without a forecast`}
+          onPress={() => router.push({ pathname: '/course/[id]', params: { id: course.courseId } })}
+        />
+      ))}
+    </Section>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  tiles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    padding: Spacing.two,
+  },
+  tileWrap: {
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
+  tile: {
     padding: Spacing.three,
-    borderRadius: Radius.large,
-    gap: Spacing.one,
+    borderRadius: Radius.small,
+    gap: 2,
   },
   pressed: {
     opacity: 0.7,

@@ -333,9 +333,11 @@ but is not a relational SQL database.
    3. `20260924000300_grade_engine.sql`
    4. `20260924000400_sample_gradebook.sql`
    5. `20260929000500_grade_api.sql`
+   6. `20261006000600_sync.sql` (cloud sync — see [`../sync.md`](../sync.md))
 3. Check it: paste and run
    [`supabase/tests/gradebook_test.sql`](../../supabase/tests/gradebook_test.sql),
-   then [`grade_api_test.sql`](../../supabase/tests/grade_api_test.sql).
+   then [`grade_api_test.sql`](../../supabase/tests/grade_api_test.sql), then
+   [`sync_test.sql`](../../supabase/tests/sync_test.sql).
    Each creates two test students, checks the grade math, forecasts, and
    privacy rules, then **rolls back**, so nothing is left behind. If it ends
    with **Success**, every check passed; a failed check stops with an error
@@ -350,13 +352,41 @@ but is not a relational SQL database.
 - **Email** — on by default.
 - **Phone** — needs an SMS provider (for example Twilio).
 - **Google**, **Apple**, **Azure (Microsoft)** — each needs a client ID and
-  secret from that company's developer console. Supabase's page for each
-  provider links to the steps.
-  - Google: Google Cloud Console → APIs & Services → Credentials → OAuth client
-    ID (type *Web application*), with Supabase's callback URL as the redirect URI.
-  - Apple: needs a paid Apple Developer account (Services ID + key).
-  - Microsoft: Azure portal → App registrations, with Supabase's callback URL
-    as the redirect URI. The app asks for the `email` scope.
+  secret from that company's developer console (steps below).
+
+Both Google and Microsoft send the student back to Supabase first, at the
+**callback URL** shown on each provider's page in Supabase:
+`https://<project-ref>.supabase.co/auth/v1/callback`.
+
+**Google** (any Gmail or Google Workspace account):
+1. [Google Cloud Console](https://console.cloud.google.com/) → create a project
+   (for example "Grade Tracker").
+2. **APIs & Services → OAuth consent screen**: user type **External**; app
+   name, support email; scopes `openid`, `email`, `profile`. While the app is in
+   **Testing**, add your own Gmail under **Test users** (only test users can sign in).
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
+   type **Web application**; under **Authorized redirect URIs** add the Supabase
+   callback URL.
+4. Copy the **Client ID** and **Client secret** into Supabase → **Authentication →
+   Sign In / Providers → Google**, and turn it on.
+
+**Microsoft** (personal Outlook/Hotmail accounts and school/work accounts):
+1. [Azure portal](https://portal.azure.com/) → **Microsoft Entra ID → App
+   registrations → New registration**.
+2. Supported account types: **Accounts in any organizational directory and
+   personal Microsoft accounts**. Redirect URI: platform **Web**, the Supabase
+   callback URL.
+3. **Certificates & secrets → New client secret**. Copy the secret's **Value**
+   right away (it is shown once). Note when it expires.
+4. In Supabase → **Azure**: Client ID = the **Application (client) ID**, Secret =
+   the value from step 3. Leave **Azure Tenant URL** empty so any account works.
+   The app asks for the `email` scope.
+5. School accounts: many school Microsoft 365 tenants block apps their IT has not
+   approved, and show "Need admin approval". That is a school setting, not a bug;
+   personal Microsoft accounts and Google still work.
+
+**Apple:** needs a paid Apple Developer account (Services ID + key). Deferred;
+the app shows the Apple button on iPhone only.
 
 The app opens these sign-ins in an in-app browser and must be allowed back in.
 Under **Authentication → URL Configuration → Redirect URLs**, add:
@@ -420,7 +450,7 @@ database password in the app or in this repository.
 ### Running the tests locally (optional)
 With PostgreSQL 15+ installed: `supabase/tests/run_local.sh`. It creates a
 scratch database, adds a small stand-in for Supabase's `auth` schema, applies
-the migrations, runs both test files, loads the seed twice, and runs `demo.sql`.
+the migrations, runs the test files, loads the seed twice, and runs `demo.sql`.
 
 ---
 

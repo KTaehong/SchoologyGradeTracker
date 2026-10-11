@@ -12,9 +12,9 @@ import { formatDayLabel, formatDueTime, groupUpcomingByDay } from '@/data/upcomi
 import { Radius, Spacing } from '@/theme/colors';
 
 export default function UpcomingScreen() {
-  const { state } = useGradebook();
+  const { state, syncNow } = useGradebook();
 
-  if (state.status === 'loading') {
+  if (state.status !== 'ready') {
     return (
       <Screen title="Upcoming">
         <Loading />
@@ -22,13 +22,16 @@ export default function UpcomingScreen() {
     );
   }
 
-  const { courses, upcoming } = state.gradebook;
+  const { courses, upcoming } = state;
   const courseNames = new Map(courses.map((course) => [course.id, course.name]));
   const days = groupUpcomingByDay(upcoming);
   const refresh = () => comingSoon('Refreshing from your Schoology calendar');
 
   return (
-    <Screen title="Upcoming" action={<HeaderButton label="Refresh" onPress={refresh} />}>
+    <Screen
+      title="Upcoming"
+      action={<HeaderButton label="Refresh" onPress={refresh} />}
+      onRefresh={syncNow}>
       {days.length === 0 ? (
         <EmptyState
           title="Nothing due"

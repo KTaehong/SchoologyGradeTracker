@@ -12,6 +12,11 @@ export default function AppTabs() {
       tintColor={colors.accent}
       labelStyle={{ selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="grades">
         <NativeTabs.Trigger.Label>Grades</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'graduationcap', selected: 'graduationcap.fill' }} md="school" />
       </NativeTabs.Trigger>
