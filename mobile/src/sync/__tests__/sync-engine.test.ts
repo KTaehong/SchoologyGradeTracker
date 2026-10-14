@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import { createSampleGradebook } from '@/data/sample-gradebook';
 import {
+  addAssignment,
+  addCategory,
+  addCourse,
   addForecast,
   countPendingChanges,
+  deleteCourse,
   eraseGradebook,
   insertCourses,
   insertUpcoming,
@@ -11,6 +15,8 @@ import {
   readUpcoming,
   removeForecast,
   setForecast,
+  updateAssignment,
+  updateCourse,
 } from '@/db/gradebook-repo';
 import type { SqlDb } from '@/db/sql';
 import { computeCourseGrades } from '@/engine/grade-engine';
@@ -163,6 +169,41 @@ describe('sync', () => {
 
     expect((await findAssignment(tablet.db, 'Quiz 2.2')).assignment.forecastScore).toBe(4);
     await expect(findAssignment(tablet.db, 'Unit 3 Test: Integrals')).rejects.toThrow();
+  });
+
+  it('carries a class built by hand, its edits, and its delete to the other phone', async () => {
+    const newId = uuids();
+    const phone = await device(server);
+    await attachAccount(phone.db, 'ana');
+    const tablet = await device(server);
+    await attachAccount(tablet.db, 'ana');
+
+    const courseId = await addCourse(phone.db, newId, { name: 'Chem', teacher: null, gradingMode: 'weighted' }, [
+      { name: 'Q1', kind: 'quarter' },
+    ]);
+    const periodId = (await readCourses(phone.db))[0].periods[0].id;
+    const labs = newId();
+    await addCategory(phone.db, labs, periodId, { name: 'Labs', weight: 100, dropLowest: 0 });
+    const lab = newId();
+    const lab1 = { title: 'Lab 1', dueDate: null, maxScore: 10, actualScore: 7, excused: false, extraCredit: false };
+    await addAssignment(phone.db, lab, labs, lab1);
+    await phone.engine.sync();
+    await tablet.engine.sync();
+    expect(computeCourseGrades((await readCourses(tablet.db))[0]).current.percent).toBe(70);
+
+    await updateCourse(tablet.db, courseId, { name: 'Chemistry', teacher: 'Mr. Ode', gradingMode: 'weighted' });
+    await updateAssignment(tablet.db, lab, { ...lab1, actualScore: 9 });
+    await tablet.engine.sync();
+    await phone.engine.sync();
+    const [course] = await readCourses(phone.db);
+    expect(course).toMatchObject({ name: 'Chemistry', teacher: 'Mr. Ode' });
+    expect(computeCourseGrades(course).current.percent).toBe(90);
+
+    await deleteCourse(phone.db, courseId);
+    await phone.engine.sync();
+    await tablet.engine.sync();
+    expect(await readCourses(tablet.db)).toEqual([]);
+    expect(phone.engine.getStatus()).toMatchObject({ pending: 0 });
   });
 
   it('keeps edits made offline and sends them when back online', async () => {
