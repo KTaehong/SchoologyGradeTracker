@@ -13,9 +13,10 @@ export function formatGrade(grade: { percent: number | null; letter: string | nu
 
 /** `8 / 10`, trimming needless decimals. */
 export function formatPoints(score: number, maxScore: number): string {
-  return `${trimNumber(score)} / ${trimNumber(maxScore)}`;
+  return `${formatNumber(score)} / ${formatNumber(maxScore)}`;
 }
 
-function trimNumber(value: number): string {
+/** `8.5`, `8`, at most 2 decimals. */
+export function formatNumber(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
 }

@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -32,7 +33,7 @@ export default function AddGradesScreen() {
           <Row
             label="Add a class"
             detail="Create a class and type in its categories and assignments."
-            onPress={() => comingSoon('Adding a class by hand')}
+            onPress={() => router.push('/course-form')}
           />
         </Section>
       </ScrollView>

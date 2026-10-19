@@ -64,7 +64,8 @@ export function validateNewForecast(form: NewForecastForm): FormResult<NewForeca
   };
 }
 
-function isIsoDate(text: string): boolean {
+/** A real calendar date written `YYYY-MM-DD`. */
+export function isIsoDate(text: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
     return false;
   }

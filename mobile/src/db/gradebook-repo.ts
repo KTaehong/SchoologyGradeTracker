@@ -312,6 +312,188 @@ export async function removeForecast(db: SqlDb, assignmentId: string): Promise<v
   });
 }
 
+// -----------------------------------------------------------------------------
+// Manual entry (F06): classes, categories and assignments typed in by hand
+// -----------------------------------------------------------------------------
+
+export type CourseFields = { name: string; teacher: string | null; gradingMode: GradingMode };
+export type NewPeriod = { name: string; kind: PeriodKind };
+export type CategoryFields = { name: string; weight: number | null; dropLowest: number };
+export type AssignmentFields = {
+  title: string;
+  dueDate: string | null;
+  maxScore: number;
+  /** `null` = not graded yet. */
+  actualScore: number | null;
+  excused: boolean;
+  extraCredit: boolean;
+};
+
+async function nextPosition(db: SqlDb, table: SyncTable, parentColumn?: string, parentId?: string) {
+  const where = parentColumn ? `where ${parentColumn} = ?` : '';
+  const row = await first<{ position: number }>(
+    db,
+    `select coalesce(max(position), 0) + 1 as position from ${table} ${where}`,
+    parentId ? [parentId] : [],
+  );
+  return row?.position ?? 1;
+}
+
+async function requireRow(db: SqlDb, table: SyncTable, id: string, what: string) {
+  const row = await first<{ id: string }>(db, `select id from ${table} where id = ? and deleted = 0`, [id]);
+  if (!row) {
+    throw new NotFoundError(`That ${what} is no longer in your gradebook.`);
+  }
+}
+
+/** Adds an empty class with its grading periods. `newId` makes each row's id. */
+export async function addCourse(
+  db: SqlDb,
+  newId: () => string,
+  fields: CourseFields,
+  periods: NewPeriod[],
+): Promise<string> {
+  const courseId = newId();
+  await db.transaction(async () => {
+    await db.run(
+      `insert into courses (id, name, teacher, grading_mode, position, source, dirty)
+       values (?, ?, ?, ?, ?, 'manual', 1)`,
+      [courseId, fields.name, fields.teacher, fields.gradingMode, await nextPosition(db, 'courses')],
+    );
+    for (const [index, p] of periods.entries()) {
+      await db.run(
+        `insert into grading_periods (id, course_id, name, kind, position, dirty)
+         values (?, ?, ?, ?, ?, 1)`,
+        [newId(), courseId, p.name, p.kind, index + 1],
+      );
+    }
+  });
+  return courseId;
+}
+
+export async function updateCourse(db: SqlDb, courseId: string, fields: CourseFields): Promise<void> {
+  await db.transaction(async () => {
+    await requireRow(db, 'courses', courseId, 'class');
+    await db.run(
+      'update courses set name = ?, teacher = ?, grading_mode = ?, dirty = dirty + 1 where id = ?',
+      [fields.name, fields.teacher, fields.gradingMode, courseId],
+    );
+  });
+}
+
+/** Deletes a class and everything in it. Its upcoming items stay, unfiled (as on the server). */
+export async function deleteCourse(db: SqlDb, courseId: string): Promise<void> {
+  await db.transaction(async () => {
+    await requireRow(db, 'courses', courseId, 'class');
+    await deleteRow(db, 'courses', courseId);
+    await db.run(
+      'update upcoming_items set course_id = null, dirty = dirty + 1 where course_id = ? and deleted = 0',
+      [courseId],
+    );
+  });
+}
+
+export async function addCategory(
+  db: SqlDb,
+  id: string,
+  periodId: string,
+  fields: CategoryFields,
+): Promise<void> {
+  await db.transaction(async () => {
+    await requireRow(db, 'grading_periods', periodId, 'grading period');
+    await db.run(
+      `insert into categories (id, period_id, name, weight, drop_lowest, position, dirty)
+       values (?, ?, ?, ?, ?, ?, 1)`,
+      [
+        id,
+        periodId,
+        fields.name,
+        fields.weight,
+        fields.dropLowest,
+        await nextPosition(db, 'categories', 'period_id', periodId),
+      ],
+    );
+  });
+}
+
+export async function updateCategory(db: SqlDb, id: string, fields: CategoryFields): Promise<void> {
+  await db.transaction(async () => {
+    await requireRow(db, 'categories', id, 'category');
+    await db.run(
+      'update categories set name = ?, weight = ?, drop_lowest = ?, dirty = dirty + 1 where id = ?',
+      [fields.name, fields.weight, fields.dropLowest, id],
+    );
+  });
+}
+
+/** Deletes a category and its assignments. */
+export async function deleteCategory(db: SqlDb, id: string): Promise<void> {
+  await db.transaction(async () => {
+    await requireRow(db, 'categories', id, 'category');
+    await deleteRow(db, 'categories', id);
+  });
+}
+
+export async function addAssignment(
+  db: SqlDb,
+  id: string,
+  categoryId: string,
+  fields: AssignmentFields,
+): Promise<void> {
+  await db.transaction(async () => {
+    await requireRow(db, 'categories', categoryId, 'category');
+    await db.run(
+      `insert into assignments (id, category_id, title, due_date, max_score, actual_score,
+         excused, extra_credit, source, position, dirty)
+       values (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, 1)`,
+      [
+        id,
+        categoryId,
+        fields.title,
+        fields.dueDate,
+        fields.maxScore,
+        fields.actualScore,
+        bool(fields.excused),
+        bool(fields.extraCredit),
+        await nextPosition(db, 'assignments', 'category_id', categoryId),
+      ],
+    );
+  });
+}
+
+/**
+ * Changes an assignment. Giving a forecast-only item a real score turns it
+ * into a regular assignment (the server allows no score on a placeholder).
+ */
+export async function updateAssignment(db: SqlDb, id: string, fields: AssignmentFields): Promise<void> {
+  await db.transaction(async () => {
+    const row = await requireAssignment(db, id);
+    const isPlaceholder = row.is_placeholder === 1 && fields.actualScore === null;
+    await db.run(
+      `update assignments set title = ?, due_date = ?, max_score = ?, actual_score = ?,
+         excused = ?, extra_credit = ?, is_placeholder = ?, dirty = dirty + 1
+       where id = ?`,
+      [
+        fields.title,
+        fields.dueDate,
+        fields.maxScore,
+        fields.actualScore,
+        bool(fields.excused),
+        bool(fields.extraCredit),
+        bool(isPlaceholder),
+        id,
+      ],
+    );
+  });
+}
+
+export async function deleteAssignment(db: SqlDb, id: string): Promise<void> {
+  await db.transaction(async () => {
+    await requireAssignment(db, id);
+    await deleteRow(db, 'assignments', id);
+  });
+}
+
 /** Rows changed on this phone and not yet in the cloud. */
 export async function countPendingChanges(db: SqlDb): Promise<number> {
   let total = 0;

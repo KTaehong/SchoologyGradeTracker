@@ -30,7 +30,13 @@ import type { CourseGrades, NewForecast } from '@/api/grades';
 import { createRpcCaller } from '@/api/rpc';
 import { useSession } from '@/api/use-session';
 import {
+  addAssignment,
+  addCategory,
+  addCourse as addCourseRows,
   addForecast as addForecastRow,
+  deleteAssignment as deleteAssignmentRow,
+  deleteCategory as deleteCategoryRow,
+  deleteCourse as deleteCourseRow,
   eraseGradebook,
   getMeta,
   insertCourses,
@@ -40,6 +46,13 @@ import {
   removeForecast as removeForecastRow,
   setForecast as setForecastRow,
   setMeta,
+  updateAssignment,
+  updateCategory,
+  updateCourse as updateCourseRow,
+  type AssignmentFields,
+  type CategoryFields,
+  type CourseFields,
+  type NewPeriod,
 } from '@/db/gradebook-repo';
 import { openGradebookDatabase } from '@/db/open-database';
 import type { SqlDb } from '@/db/sql';
@@ -71,6 +84,20 @@ type GradebookContextValue = {
   setForecast: (assignmentId: string, score: number) => Promise<void>;
   addForecast: (forecast: NewForecast) => Promise<void>;
   removeForecast: (assignmentId: string) => Promise<void>;
+  /** Adds an empty class (F06). Resolves to its id. */
+  addCourse: (fields: CourseFields, periods: NewPeriod[]) => Promise<string>;
+  updateCourse: (courseId: string, fields: CourseFields) => Promise<void>;
+  /** Deletes a class and everything in it. */
+  deleteCourse: (courseId: string) => Promise<void>;
+  /** Adds a category to `periodId`, or changes the category `categoryId`. */
+  saveCategory: (target: { periodId: string } | { categoryId: string }, fields: CategoryFields) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
+  /** Adds an assignment to `categoryId`, or changes the assignment `assignmentId`. */
+  saveAssignment: (
+    target: { categoryId: string } | { assignmentId: string },
+    fields: AssignmentFields,
+  ) => Promise<void>;
+  deleteAssignment: (assignmentId: string) => Promise<void>;
   /** Pull-to-refresh: sync now. Resolves when done (never rejects). */
   syncNow: () => Promise<void>;
   /** Signs out and removes this phone's copy of the account's grades. */
@@ -220,6 +247,29 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       setForecast: (assignmentId, score) => edit((d) => setForecastRow(d, assignmentId, score)),
       addForecast: (forecast) => edit((d) => addForecastRow(d, newId(), forecast)),
       removeForecast: (assignmentId) => edit((d) => removeForecastRow(d, assignmentId)),
+      addCourse: async (fields, periods) => {
+        let id = '';
+        await edit(async (d) => {
+          id = await addCourseRows(d, newId, fields, periods);
+        });
+        return id;
+      },
+      updateCourse: (courseId, fields) => edit((d) => updateCourseRow(d, courseId, fields)),
+      deleteCourse: (courseId) => edit((d) => deleteCourseRow(d, courseId)),
+      saveCategory: (target, fields) =>
+        edit((d) =>
+          'categoryId' in target
+            ? updateCategory(d, target.categoryId, fields)
+            : addCategory(d, newId(), target.periodId, fields),
+        ),
+      deleteCategory: (categoryId) => edit((d) => deleteCategoryRow(d, categoryId)),
+      saveAssignment: (target, fields) =>
+        edit((d) =>
+          'assignmentId' in target
+            ? updateAssignment(d, target.assignmentId, fields)
+            : addAssignment(d, newId(), target.categoryId, fields),
+        ),
+      deleteAssignment: (assignmentId) => edit((d) => deleteAssignmentRow(d, assignmentId)),
       syncNow: async () => {
         if (engineRef.current) await engineRef.current.sync();
         else if (db) await reload(db);
@@ -245,6 +295,12 @@ export function useGradebook() {
     throw new Error('useGradebook must be used inside GradebookProvider');
   }
   return context;
+}
+
+/** One course's raw gradebook (for editing), or `undefined` while loading / when it is gone. */
+export function useCourse(courseId: string | undefined): GradeCourse | undefined {
+  const { state } = useGradebook();
+  return state.status === 'ready' ? state.courses.find((c) => c.id === courseId) : undefined;
 }
 
 /** One course's grades, or `undefined` while loading / when it is gone. */

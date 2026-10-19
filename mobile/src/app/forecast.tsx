@@ -1,8 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 
-import { errorMessage, type CourseGrades } from '@/api';
+import type { CourseGrades } from '@/api';
 import { EmptyState } from '@/components/empty-state';
 import { Loading } from '@/components/loading';
 import { PeriodPicker } from '@/components/period-picker';
@@ -11,6 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
 import { useCourseGrades, useGradebook } from '@/data/gradebook-store';
 import { validateForecastScore, validateNewForecast } from '@/lib/forecast-form';
+import { useSave } from '@/lib/use-save';
 import { Spacing } from '@/theme/colors';
 
 type Params = {
@@ -42,24 +43,6 @@ export default function ForecastScreen() {
       </KeyboardAvoidingView>
     </ThemedView>
   );
-}
-
-/** Use a mutation, show its error, and close the sheet when it succeeds. */
-function useSave() {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const save = async (action: () => Promise<unknown>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await action();
-      router.back();
-    } catch (e) {
-      setError(errorMessage(e));
-      setBusy(false);
-    }
-  };
-  return { busy, error, setError, save };
 }
 
 function EditForecast({ params }: { params: Params & { assignmentId: string } }) {

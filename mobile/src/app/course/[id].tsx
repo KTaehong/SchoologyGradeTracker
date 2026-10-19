@@ -2,15 +2,17 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import type { CourseGrades, UngradedAssignment } from '@/api';
+import type { CourseGrades, PeriodGrades, UngradedAssignment } from '@/api';
 import { EmptyState } from '@/components/empty-state';
+import { HeaderButton } from '@/components/header-button';
 import { Loading } from '@/components/loading';
 import { PeriodPicker } from '@/components/period-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Row, Section } from '@/components/ui';
-import { useCourseGrades, useGradebook } from '@/data/gradebook-store';
-import { formatGrade, formatPercent, formatPoints } from '@/lib/format-grade';
+import { Button, Row, Section } from '@/components/ui';
+import { useCourse, useCourseGrades, useGradebook } from '@/data/gradebook-store';
+import type { GradeAssignment, GradeCourse } from '@/engine/types';
+import { formatGrade, formatNumber, formatPercent, formatPoints } from '@/lib/format-grade';
 import { Radius, Spacing } from '@/theme/colors';
 
 /** One course: grades at every level, plus forecasts (F03, F08, F10). Computed on this phone. */
@@ -18,11 +20,12 @@ export default function CourseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state } = useGradebook();
   const course = useCourseGrades(id);
+  const raw = useCourse(id);
 
   if (state.status === 'loading') {
     return <Loading />;
   }
-  if (!course) {
+  if (!course || !raw) {
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: 'Course' }} />
@@ -32,16 +35,23 @@ export default function CourseScreen() {
       </ThemedView>
     );
   }
-  return <CourseDetail course={course} />;
+  return <CourseDetail course={course} raw={raw} />;
 }
 
-function CourseDetail({ course }: { course: CourseGrades }) {
+function CourseDetail({ course, raw }: { course: CourseGrades; raw: GradeCourse }) {
   const [periodIndex, setPeriodIndex] = useState(0);
   const period = course.periods[Math.min(periodIndex, course.periods.length - 1)];
+  const editCourse = () =>
+    router.push({ pathname: '/course-form', params: { courseId: course.courseId } });
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: course.name }} />
+      <Stack.Screen
+        options={{
+          title: course.name,
+          headerRight: () => <HeaderButton label="Edit" onPress={editCourse} />,
+        }}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedView type="backgroundElement" style={styles.summary}>
           <ThemedText type="small" themeColor="textSecondary">
@@ -56,7 +66,7 @@ function CourseDetail({ course }: { course: CourseGrades }) {
 
         <ForecastSection course={course} />
 
-        {course.semesters.length > 0 ? (
+        {course.semesters.some((s) => s.projectedPercent !== null) ? (
           <Section title="Semesters" footer="Quarters count 50/50, blended with the exam by its weight.">
             {course.semesters.map((s) => (
               <Row
@@ -77,29 +87,112 @@ function CourseDetail({ course }: { course: CourseGrades }) {
           />
         ) : null}
 
-        {period ? (
-          <Section
-            title={`${period.name} · ${formatPercent(period.currentPercent)}`}
-            footer={`Projected ${formatPercent(period.projectedPercent)}`}>
-            {period.categories.length === 0 ? (
-              <Row label="No categories" />
-            ) : (
-              period.categories.map((c) => (
-                <Row
-                  key={c.categoryId}
-                  label={c.weight === null ? c.name : `${c.name} · ${c.weight}%`}
-                  detail={`Projected ${formatPercent(c.projectedPercent)}${
-                    c.dropLowest ? ` · lowest ${c.dropLowest} dropped` : ''
-                  }`}
-                  right={<ThemedText>{formatPercent(c.currentPercent)}</ThemedText>}
-                />
-              ))
-            )}
-          </Section>
-        ) : null}
+        {period ? <PeriodDetail course={course} raw={raw} period={period} /> : null}
       </ScrollView>
     </ThemedView>
   );
+}
+
+/** One grading period: each category with its assignments, all editable (F06). */
+function PeriodDetail({
+  course,
+  raw,
+  period,
+}: {
+  course: CourseGrades;
+  raw: GradeCourse;
+  period: PeriodGrades;
+}) {
+  const categories = raw.periods.find((p) => p.id === period.periodId)?.categories ?? [];
+  const courseId = course.courseId;
+  const weighted = course.gradingMode === 'weighted';
+
+  return (
+    <>
+      <ThemedText type="subtitle">
+        {period.name} · {formatPercent(period.currentPercent)}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        Projected {formatPercent(period.projectedPercent)}
+      </ThemedText>
+      {period.categories.length === 0 ? (
+        <EmptyState
+          title="No categories yet"
+          message={
+            weighted
+              ? 'Add the categories from your syllabus, like Tests 40% and Homework 20%.'
+              : 'Add a category (like Tests) to put assignments in.'
+          }
+        />
+      ) : null}
+      {period.categories.map((c) => {
+        const assignments = categories.find((k) => k.id === c.categoryId)?.assignments ?? [];
+        return (
+          <Section
+            key={c.categoryId}
+            title={c.weight === null || !weighted ? c.name : `${c.name} · ${c.weight}%`}>
+            <Row
+              label={`Average ${formatPercent(c.currentPercent)}`}
+              detail={`Projected ${formatPercent(c.projectedPercent)}${
+                c.dropLowest ? ` · lowest ${c.dropLowest} dropped` : ''
+              } · tap to edit`}
+              onPress={() =>
+                router.push({
+                  pathname: '/category-form',
+                  params: { courseId, categoryId: c.categoryId },
+                })
+              }
+            />
+            {assignments.map((a) => (
+              <Row
+                key={a.id}
+                label={a.title}
+                detail={assignmentDetail(a)}
+                right={<ThemedText>{assignmentScore(a)}</ThemedText>}
+                onPress={() =>
+                  router.push({ pathname: '/assignment-form', params: { courseId, assignmentId: a.id } })
+                }
+              />
+            ))}
+            <Row
+              label="+ Add assignment"
+              onPress={() =>
+                router.push({
+                  pathname: '/assignment-form',
+                  params: { courseId, categoryId: c.categoryId },
+                })
+              }
+            />
+          </Section>
+        );
+      })}
+      <Button
+        label="+ Add category"
+        variant={period.categories.length === 0 ? 'primary' : 'secondary'}
+        onPress={() =>
+          router.push({ pathname: '/category-form', params: { courseId, periodId: period.periodId } })
+        }
+      />
+    </>
+  );
+}
+
+function assignmentScore(a: GradeAssignment): string {
+  if (a.excused) return 'Excused';
+  if (a.actualScore !== null) return formatPoints(a.actualScore, a.maxScore);
+  return `— / ${formatNumber(a.maxScore)}`;
+}
+
+function assignmentDetail(a: GradeAssignment): string | undefined {
+  const parts = [
+    a.dueDate ? `due ${a.dueDate}` : null,
+    a.extraCredit ? 'extra credit' : null,
+    a.actualScore === null && a.forecastScore !== null
+      ? `forecast ${formatPoints(a.forecastScore, a.maxScore)}`
+      : null,
+    a.isPlaceholder ? 'not in Schoology yet' : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 /** Work with no grade yet, and the forecast for each. Tap one to forecast it. */
