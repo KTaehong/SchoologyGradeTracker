@@ -5,6 +5,7 @@ import { useSession } from '@/api';
 import { Loading } from '@/components/loading';
 import AppTabs from '@/components/app-tabs';
 import { hasSeenWelcome } from '@/data/storage';
+import { tabsGate } from '@/lib/tabs-gate';
 
 /** The tabs, after the welcome screen has been seen once (or the student is already signed in). */
 export default function TabsLayout() {
@@ -17,10 +18,11 @@ export default function TabsLayout() {
       .then(setSeen);
   }, []);
 
-  if (seen === null || session.status === 'loading') {
+  const gate = tabsGate(seen, session.status);
+  if (gate === 'wait') {
     return <Loading />;
   }
-  if (!seen && session.status === 'signed_out') {
+  if (gate === 'welcome') {
     return <Redirect href="/welcome" />;
   }
   return <AppTabs />;

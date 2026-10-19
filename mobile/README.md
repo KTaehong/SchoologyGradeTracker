@@ -21,6 +21,17 @@ The iOS + Android app, built with React Native + Expo (TypeScript).
 Your phone and computer need to be on the same Wi-Fi. If they can't see each
 other (for example on school Wi-Fi), run `npx expo start --tunnel` instead.
 
+### If Expo Go won't open the app or is slow
+
+- **Stuck on "Downloading JavaScript bundle" / "Opening project…":** the phone
+  can't reach your computer. Use `npx expo start --tunnel`, or put both on the
+  same Wi-Fi (school and guest networks often block this).
+- **Strange errors or old code after pulling changes:** clear Metro's cache
+  with `npx expo start --clear`.
+- **First open after an update is slow:** Expo Go downloads the whole app the
+  first time; later opens are faster. Don't close Expo Go while offline — it
+  reloads the app from your computer.
+
 ## Cloud API (optional)
 
 The app works fully offline. To use the cloud API (sign-in, grades snapshot,
