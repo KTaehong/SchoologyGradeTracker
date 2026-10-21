@@ -32,6 +32,28 @@ other (for example on school Wi-Fi), run `npx expo start --tunnel` instead.
   first time; later opens are faster. Don't close Expo Go while offline — it
   reloads the app from your computer.
 
+## Development and release builds (EAS)
+
+Expo Go is enough for most screens. Features that need native code Expo Go
+doesn't include (Sign in with Apple under the app's own ID, and later the
+on-device text reading for screenshot import) need a **development build**,
+made in the cloud with EAS Build. Profiles are in [`eas.json`](eas.json).
+
+```bash
+npm install -g eas-cli
+eas login                                  # free Expo account
+eas build --profile development --platform android   # .apk, no Apple account needed
+eas device:create                          # once per iPhone: registers its UDID
+eas build --profile development --platform ios       # signs with the Apple team
+```
+
+- Install the build from the link EAS prints, then run `npx expo start` and
+  open the project from the dev build instead of Expo Go.
+- iOS builds sign with the Apple Developer team you pick at `eas build`. The
+  app's IDs are `com.ktaehong.gradetracker` on both platforms (`app.json`).
+- `preview` makes a shareable Android `.apk` and an ad-hoc iOS build;
+  `production` is for TestFlight / the stores (`eas submit`).
+
 ## Cloud API (optional)
 
 The app works fully offline. To use the cloud API (sign-in, grades snapshot,
@@ -72,7 +94,8 @@ npm run lint        # ESLint
 - `src/test-support/` — test helpers: an in-memory SQLite and a fake sync server.
 - `src/api/` — the cloud API. `client.ts` makes the one Supabase client, which
   keeps the sign-in session in secure storage and sends the token with every
-  request; `auth.ts` signs in and out (email, Google, Apple, Microsoft);
+  request; `auth.ts` signs in and out (email, Google, Apple, Microsoft;
+  `apple-sign-in.ts` shows Apple's native sheet on iPhone);
   `grades.ts` is the grade engine API (grades snapshot, add/set/remove
   forecasts, load sample grades); `use-session.ts` is a hook for the sign-in
   state and `use-api-query.ts` loads API data when a screen opens.

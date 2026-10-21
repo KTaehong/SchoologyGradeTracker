@@ -6,7 +6,9 @@
 import type { AuthError, Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
+import { requestAppleCredential } from './apple-sign-in';
 import { getSupabase, isApiConfigured } from './client';
 import { ApiError } from './errors';
 import { parseOAuthCallback } from './oauth-callback';
@@ -70,14 +72,18 @@ export function oauthRedirectUrl(): string {
 }
 
 /**
- * Signs in with Google, Apple, or Microsoft in a secure in-app browser.
- * Resolves to `null` if the student closes the browser without finishing.
+ * Signs in with Google, Apple, or Microsoft in a secure in-app browser (on
+ * iPhone, Apple uses its native sheet instead). Resolves to `null` if the
+ * student closes the browser or sheet without finishing.
  *
  * Each provider must be turned on in Supabase (Authentication → Sign In /
  * Providers), and `oauthRedirectUrl()` must be in Authentication → URL
  * Configuration → Redirect URLs. See docs/database/README.md.
  */
 export async function signInWithProvider(provider: OAuthProvider): Promise<Session | null> {
+  if (provider === 'apple' && Platform.OS === 'ios') {
+    return signInWithAppleNative();
+  }
   const supabase = getSupabase();
   const redirectTo = oauthRedirectUrl();
 
@@ -108,6 +114,34 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<Sessi
     throw toAuthApiError(exchanged.error);
   }
   return exchanged.data.session;
+}
+
+async function signInWithAppleNative(): Promise<Session | null> {
+  const credential = await requestAppleCredential();
+  if (!credential) {
+    return null;
+  }
+  const supabase = getSupabase();
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce: credential.rawNonce,
+  });
+  if (error) {
+    throw toAuthApiError(error);
+  }
+
+  // Apple's ID token carries no name, so a new profile starts as "Student".
+  // Apple shares the name once, on the first sign-in: save it then. Best
+  // effort; the student can still edit their name later.
+  if (credential.fullName && data.user) {
+    await supabase
+      .from('profiles')
+      .update({ full_name: credential.fullName })
+      .eq('id', data.user.id)
+      .eq('full_name', 'Student');
+  }
+  return data.session;
 }
 
 /** Signs out and deletes the saved session from secure storage. */

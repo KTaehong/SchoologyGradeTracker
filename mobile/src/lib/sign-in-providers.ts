@@ -3,9 +3,9 @@ import type { OAuthProvider } from '@/api/auth';
 export type ProviderButton = { provider: OAuthProvider; label: string };
 
 /**
- * The "Continue with …" buttons for this phone. Apple is shown on iPhone only:
- * on Android it needs an Apple Services ID from a paid Apple Developer
- * account, which this project has deferred.
+ * The "Continue with …" buttons for this phone. Apple is shown on iPhone only,
+ * where it uses Apple's native sheet; on Android it would need an Apple
+ * Services ID and web sign-in, which the MVP leaves out.
  */
 export function signInProviders(os: string): ProviderButton[] {
   const providers: ProviderButton[] = [
