@@ -1,0 +1,21 @@
+PASS src/db/__tests__/manual-entry.test.ts
+PASS src/api/__tests__/oauth-callback.test.ts
+PASS src/lib/__tests__/forecast-form.test.ts
+PASS src/sync/__tests__/sync-engine.test.ts
+PASS src/lib/__tests__/greeting.test.ts
+PASS src/lib/__tests__/sync-label.test.ts
+PASS src/api/__tests__/errors.test.ts
+PASS src/api/__tests__/secure-session-storage.test.ts
+PASS src/engine/__tests__/grade-engine.test.ts
+PASS src/lib/__tests__/tabs-gate.test.ts
+PASS src/lib/__tests__/gradebook-form.test.ts
+PASS src/data/__tests__/storage.test.ts
+PASS src/api/__tests__/grades.test.ts
+PASS src/data/__tests__/upcoming.test.ts
+PASS src/lib/__tests__/sign-in-providers.test.ts
+PASS src/lib/__tests__/apple-name.test.ts
+PASS src/api/__tests__/index.test.ts
+Test Suites: 17 passed, 17 total
+Tests:       146 passed, 146 total
+> tsc --noEmit
+> expo lint

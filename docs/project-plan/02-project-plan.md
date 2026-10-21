@@ -24,6 +24,27 @@ counted as done.
 
 ---
 
+## Re-plan — Oct 21: Apple Developer access
+
+Through a teacher's Apple Developer team (guest role on his project), the
+project can now sign and install iOS builds. What changes:
+
+| Area | Before | Now |
+|---|---|---|
+| iPhone testing | Expo Go only | Expo Go **plus** EAS development builds on a registered iPhone |
+| Sign in with Apple | Not planned | Built (native sheet, Oct 21); needs the App ID + Supabase setup and a phone test |
+| T2.2 screenshot import | On-device text reading had no way to run on iPhone outside Expo Go — the biggest M2 risk | Can use a native text-recognition module in the dev build on **both** phones |
+| T4.3 release builds | iOS release build could not be installed | iOS build goes to **TestFlight** (needs App Store Connect access on the team) |
+| Push notifications to a closed app | Deferred | Still post-MVP (now possible later with APNs) |
+
+**New task, W4 (Oct 19 – 25):** **T2.0** EAS development builds on an iPhone and
+an Android phone + Apple sign-in set up and tested — 1.0 base → 1.5 planned hrs.
+It comes out of the buffer; **dates and milestones stay the same.** If the team
+role can't create App IDs or register devices, the teacher does those two
+steps and nothing else moves.
+
+---
+
 ## Milestones
 
 | # | Milestone | Target | Proves |
@@ -54,10 +75,11 @@ offline, and shows courses with engine-computed grades that match Schoology.
 ---
 
 ## M2 — Getting grades in
-**Target: Sun Nov 8 · Mon Oct 12 → Sun Nov 8 (lighter weeks: S&D + college apps) · 7.0 base / 10.5 planned hrs**
+**Target: Sun Nov 8 · Mon Oct 12 → Sun Nov 8 (lighter weeks: S&D + college apps) · 8.0 base / 12.0 planned hrs**
 
 | Task | Effort (base→planned) | Depends on | Target | Features | Definition of Done |
 |------|:--:|:--:|:--:|:--:|------|
+| **T2.0** Development builds (EAS) on iPhone + Android; Sign in with Apple set up | 1.0 → 1.5 | T1.1 | Sun Oct 25 | **F14** | A dev build opens on a registered iPhone and an Android phone; *Continue with Apple* signs in on the iPhone. |
 | **T2.1** Manual entry: create a class, add categories and assignments by hand | 1.0 → 1.5 | T1.5 | Fri Oct 16 | **F06** | A student can build a full class from zero, and its grade computes correctly. |
 | **T2.2** Screenshot import: photo → on-device text reading → auto-sort into class → category → rows | 3.0 → 4.5 | T2.1 | Fri Oct 30 | **F04** | A photo of a real grades screen imports on iOS and Android; class/category auto-detect or fall back to a manual pick; rows land with correct scores after review. |
 | **T2.3** Saved-report import: read a saved Schoology Grades page | 2.0 → 3.0 | T1.4 | Fri Nov 6 | **F05** | A real saved report imports with course → period → category → assignment structure and correct weights/scores. |
@@ -90,7 +112,7 @@ platforms and opt-in sync moves a gradebook between two phones.
 |------|:--:|:--:|:--:|:--:|------|
 | **T4.1** Full QA pass of F01–F14 on an iPhone **and** an Android phone | 1.0 → 1.5 | M2, M3 | Sun Nov 29 | F01–F14 | A written checklist of all 14 features × 2 platforms marked pass/fail, with every bug logged. |
 | **T4.2** Bug-fix + polish: empty/error states, both themes, rough edges from QA | 1.0 → 1.5 | T4.1 | Wed Dec 2 | F01–F14 | No P0/P1 bugs open on either platform; both themes checked; empty/error states present. |
-| **T4.3** Release builds for iOS and Android; run them on real phones | 1.0 → 1.5 | T4.2 | Thu Dec 3 | all | A release build opens and works on an iPhone and on an Android phone that never had the dev build. |
+| **T4.3** Release builds for iOS (TestFlight) and Android; run them on real phones | 1.0 → 1.5 | T4.2 | Thu Dec 3 | all | A release build opens and works on an iPhone (installed from TestFlight) and on an Android phone that never had the dev build. |
 | **T4.4** Update README with what's in/out and known limits | 0.5 → 0.75 | T4.3 | Fri Dec 4 | — | The README lists shipped features, known limits, and how to run the demo build. |
 
 **M4 done when:** every MVP feature works on the iOS and Android release builds,
@@ -103,13 +125,14 @@ no P0/P1 bugs are open, and both builds are ready for demo prep.
 | Milestone | Base hrs | Planned hrs (×1.5) |
 |-----------|:--:|:--:|
 | M1 — Core app | 6.5 | 9.75 |
-| M2 — Getting grades in | 7.0 | 10.5 |
+| M2 — Getting grades in (incl. T2.0, added Oct 21) | 8.0 | 12.0 |
 | M3 — Projection tools + sync | 5.5 | 8.25 |
 | M4 — QA + release builds | 3.5 | 5.25 |
-| **Total** | **22.5** | **≈ 33.75** |
+| **Total** | **23.5** | **≈ 35.25** |
 
-**Net planned capacity ≈ 38 hrs.** The plan fits with a **~4 hr (≈11%) buffer**,
-plus the 2 sick-day hours held in reserve.
+**Net planned capacity ≈ 38 hrs.** The plan fits with a **~2.75 hr (≈7%) buffer**
+(was ~4 hr before T2.0 was added on Oct 21), plus the 2 sick-day hours held in
+reserve.
 
 ---
 

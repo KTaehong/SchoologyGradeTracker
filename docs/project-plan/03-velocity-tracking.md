@@ -18,24 +18,25 @@ Status key: ⬜ not started · 🔄 in progress · ✅ done · ⏭️ cut/deferr
 
 | Task | Planned hrs | Actual hrs | Status | Target date | Done date | Notes / blockers |
 |------|:--:|:--:|:--:|:--:|:--:|------|
-| T1.1 App shell + light/dark theme (F12) | 1.5 | | ⬜ | Sep 27 | | |
-| T1.2 Gradebook data saved on phone (F13) | 2.25 | | ⬜ | Sep 30 | | |
-| T1.3 Onboarding (F01) | 0.75 | | ⬜ | Oct 2 | | |
-| T1.4 Grade engine (F07) | 3.0 | | ⬜ | Oct 7 | | |
-| T1.5 Grades home + course detail (F02, F03) | 2.25 | | ⬜ | Oct 9 | | |
-| T2.1 Manual entry (F06) | 1.5 | | ⬜ | Oct 16 | | |
+| T1.1 App shell + light/dark theme (F12) | 1.5 | | ✅ | Sep 27 | Sep 24 | |
+| T1.2 Gradebook data saved on phone (F13) | 2.25 | | ✅ | Sep 30 | Oct 6 | First version Sep 24; SQLite + offline Oct 6 |
+| T1.3 Onboarding (F01) | 0.75 | | ✅ | Oct 2 | Oct 6 | |
+| T1.4 Grade engine (F07) | 3.0 | | ✅ | Oct 7 | Oct 6 | |
+| T1.5 Grades home + course detail (F02, F03) | 2.25 | | ✅ | Oct 9 | Oct 6 | |
+| T2.0 Dev builds + Sign in with Apple (added Oct 21) | 1.5 | | 🔄 | Oct 25 | | Apple sign-in code + eas.json done Oct 21; builds and phone test left |
+| T2.1 Manual entry (F06) | 1.5 | | ✅ | Oct 16 | Oct 13 | Merged Oct 19 (PR #8) |
 | T2.2 Screenshot import (F04) | 4.5 | | ⬜ | Oct 30 | | |
 | T2.3 Saved-report import (F05) | 3.0 | | ⬜ | Nov 6 | | |
 | T2.4 Upcoming assignments (F11) | 1.5 | | ⬜ | Nov 8 | | |
 | T3.1 What-If grades (F08) | 1.5 | | ⬜ | Nov 12 | | |
 | T3.2 Final-grade calculator (F09) | 1.5 | | ⬜ | Nov 15 | | |
 | T3.3 Semester grades (F10) | 1.5 | | ⬜ | Nov 18 | | |
-| T3.4 Opt-in cloud sync (F14) | 3.75 | | ⬜ | Nov 22 | | |
+| T3.4 Opt-in cloud sync (F14) | 3.75 | | 🔄 | Nov 22 | | Built early (PR #6); real two-phone test left |
 | T4.1 Full QA pass, iOS + Android | 1.5 | | ⬜ | Nov 29 | | |
 | T4.2 Bug-fix + polish | 1.5 | | ⬜ | Dec 2 | | |
 | T4.3 Release builds, iOS + Android | 1.5 | | ⬜ | Dec 3 | | |
 | T4.4 README update | 0.75 | | ⬜ | Dec 4 | | |
-| **Totals** | **~33.75** | | | | | |
+| **Totals** | **~35.25** | | | | | |
 
 ## Weekly velocity
 
@@ -57,7 +58,7 @@ Status key: ⬜ not started · 🔄 in progress · ✅ done · ⏭️ cut/deferr
 
 | Milestone | Target | Actual | Status |
 |-----------|:--:|:--:|:--:|
-| M1 — Core app: grades you can see | Fri Oct 9 | | ⬜ |
+| M1 — Core app: grades you can see | Fri Oct 9 | Oct 10 (PR #6 merged) | ✅ — on-phone checks still open |
 | M2 — Getting grades in | Sun Nov 8 | | ⬜ |
 | M3 — Projection tools + cloud sync | Sun Nov 22 | | ⬜ |
 | M4 — MVP QA'd + release builds | Fri Dec 4 | | ⬜ |

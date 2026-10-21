@@ -385,8 +385,24 @@ Both Google and Microsoft send the student back to Supabase first, at the
    approved, and show "Need admin approval". That is a school setting, not a bug;
    personal Microsoft accounts and Google still work.
 
-**Apple:** needs a paid Apple Developer account (Services ID + key). Deferred;
-the app shows the Apple button on iPhone only.
+**Apple** (iPhone only — the app uses Apple's native sign-in sheet, so no
+Services ID, signing key or web callback is needed):
+1. [Apple Developer → Certificates, Identifiers & Profiles → Identifiers](https://developer.apple.com/account/resources/identifiers/list)
+   → **+** → **App IDs → App**. Bundle ID (explicit):
+   `com.ktaehong.gradetracker` (must match `ios.bundleIdentifier` in
+   `mobile/app.json`). Under **Capabilities** tick **Sign in with Apple**, then
+   **Register**. *On a team you joined as a guest, this needs the Admin or App
+   Manager role; otherwise ask the team owner to do this step. EAS can also
+   create the App ID for you at the first `eas build --platform ios` if your
+   role allows it.*
+2. Supabase → **Authentication → Sign In / Providers → Apple**: turn it on and
+   set **Client IDs** to `com.ktaehong.gradetracker,host.exp.Exponent`
+   (the second one lets Sign in with Apple work inside Expo Go while testing).
+   Leave **Secret Key** empty: it is only for web sign-in, which the app does
+   not use.
+3. Test on an iPhone: **Continue with Apple** → Face ID → back in the app,
+   signed in. Apple shares the student's name only the first time; the app
+   saves it to the profile then.
 
 The app opens these sign-ins in an in-app browser and must be allowed back in.
 Under **Authentication → URL Configuration → Redirect URLs**, add:
