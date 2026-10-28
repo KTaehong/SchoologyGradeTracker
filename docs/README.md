@@ -9,6 +9,8 @@ Start here to understand what is being built and for whom.
 | [`features.md`](features.md) | Per-feature specifications (goal, behavior, edge cases). |
 | [`user-flows.md`](user-flows.md) | Screen-by-screen student journeys, cross-referencing feature IDs. |
 | `Schoology_Grade_Tracker_UI_Mockups.docx` | UI mockups for the app screens. |
+| [`sync.md`](sync.md) | How grades are stored on the phone and synced to the cloud. |
+| [`device-testing.md`](device-testing.md) | Development builds, Sign in with Apple setup, and the on-phone test checklist. |
 
 ## [`database/`](database/)
 The cloud database design (Supabase / PostgreSQL): feature list, ER diagram,

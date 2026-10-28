@@ -8,9 +8,12 @@
     "scheme": "gradetracker",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.ktaehong.gradetracker",
+      "usesAppleSignIn": true,
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.ktaehong.gradetracker",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -33,7 +36,16 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pick a screenshot of your Schoology grades so the app can read the scores.",
+          "cameraPermission": "Take a photo of your Schoology grades so the app can read the scores.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

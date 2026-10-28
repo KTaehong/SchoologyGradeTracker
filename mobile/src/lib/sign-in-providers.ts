@@ -2,15 +2,19 @@ import type { OAuthProvider } from '@/api/auth';
 
 export type ProviderButton = { provider: OAuthProvider; label: string };
 
-/**
- * The "Continue with …" buttons for this phone. Apple is shown on iPhone only:
- * on Android it needs an Apple Services ID from a paid Apple Developer
- * account, which this project has deferred.
- */
-export function signInProviders(os: string): ProviderButton[] {
-  const providers: ProviderButton[] = [
+/** The "Continue with …" buttons that open the provider in a browser. */
+export function signInProviders(): ProviderButton[] {
+  return [
     { provider: 'google', label: 'Continue with Google' },
     { provider: 'azure', label: 'Continue with Microsoft' },
   ];
-  return os === 'ios' ? [{ provider: 'apple', label: 'Continue with Apple' }, ...providers] : providers;
+}
+
+/**
+ * Apple's own "Sign in with Apple" button is shown on iPhone only, above the
+ * others (Apple's App Review rule). On Android it would need an Apple Services
+ * ID and a web flow, which this project has not set up.
+ */
+export function showsAppleButton(os: string): boolean {
+  return os === 'ios';
 }

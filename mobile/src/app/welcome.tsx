@@ -1,9 +1,17 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { errorMessage, isApiConfigured, signInWithProvider, useSession, type OAuthProvider } from '@/api';
+import {
+  errorMessage,
+  isApiConfigured,
+  signInWithApple,
+  signInWithProvider,
+  useSession,
+  type OAuthProvider,
+} from '@/api';
+import { AppleSignInButton } from '@/components/apple-sign-in-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui';
@@ -38,11 +46,11 @@ export default function WelcomeScreen() {
     }
   }, [session.status]);
 
-  const continueWith = async (provider: OAuthProvider) => {
+  const continueWith = async (provider: OAuthProvider | 'apple-native') => {
     setBusy(true);
     setError(null);
     try {
-      await signInWithProvider(provider);
+      await (provider === 'apple-native' ? signInWithApple() : signInWithProvider(provider));
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -79,7 +87,8 @@ export default function WelcomeScreen() {
           <View style={styles.actions}>
             {cloud ? (
               <>
-                {signInProviders(Platform.OS).map(({ provider, label }) => (
+                <AppleSignInButton disabled={busy} onPress={() => continueWith('apple-native')} />
+                {signInProviders().map(({ provider, label }) => (
                   <Button
                     key={provider}
                     label={label}
