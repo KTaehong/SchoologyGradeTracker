@@ -24,6 +24,7 @@ function ThemedNavigation() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
         <Stack.Screen name="add" options={{ title: 'Add grades', presentation: 'modal' }} />
+        <Stack.Screen name="import-screenshot" options={{ title: 'Scan a screenshot' }} />
         <Stack.Screen name="forecast" options={{ title: 'Forecast', presentation: 'modal' }} />
         <Stack.Screen name="course-form" options={{ title: 'Class', presentation: 'modal' }} />
         <Stack.Screen name="category-form" options={{ title: 'Category', presentation: 'modal' }} />

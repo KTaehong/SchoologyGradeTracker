@@ -1,13 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { signInProviders } from '../sign-in-providers';
+import { showsAppleButton, signInProviders } from '../sign-in-providers';
 
 describe('signInProviders', () => {
-  it('offers Google and Microsoft on Android', () => {
-    expect(signInProviders('android').map((p) => p.provider)).toEqual(['google', 'azure']);
+  it('offers Google and Microsoft in the browser', () => {
+    expect(signInProviders().map((p) => p.provider)).toEqual(['google', 'azure']);
   });
+});
 
-  it('adds Apple first on iPhone', () => {
-    expect(signInProviders('ios').map((p) => p.provider)).toEqual(['apple', 'google', 'azure']);
+describe('showsAppleButton', () => {
+  it('shows the Apple button on iPhone only', () => {
+    expect(showsAppleButton('ios')).toBe(true);
+    expect(showsAppleButton('android')).toBe(false);
+    expect(showsAppleButton('web')).toBe(false);
   });
 });

@@ -20,7 +20,7 @@ export default function AddGradesScreen() {
           <Row
             label="Scan a screenshot"
             detail="Take or pick a photo of your Schoology grades page."
-            onPress={() => comingSoon('Screenshot import')}
+            onPress={() => router.push('/import-screenshot')}
           />
           <Row
             label="Import a saved report"

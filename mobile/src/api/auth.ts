@@ -4,6 +4,8 @@
  * and sent with every API call automatically.
  */
 import type { AuthError, Session } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -108,6 +110,57 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<Sessi
     throw toAuthApiError(exchanged.error);
   }
   return exchanged.data.session;
+}
+
+/**
+ * Signs in with Apple's own sheet on iPhone (no browser). Apple signs an ID
+ * token for the app's bundle ID; Supabase checks it, so the bundle ID must be in
+ * Authentication → Sign In / Providers → Apple → Client IDs.
+ * Resolves to `null` if the student cancels.
+ */
+export async function signInWithApple(): Promise<Session | null> {
+  const rawNonce = Crypto.randomUUID();
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+  } catch (e) {
+    if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') {
+      return null;
+    }
+    throw e;
+  }
+  if (!credential.identityToken) {
+    throw new ApiError('server', 'Apple did not return a sign-in token. Please try again.');
+  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce: rawNonce,
+  });
+  if (error) {
+    throw toAuthApiError(error);
+  }
+
+  // Apple shares the name only on the first sign-in, and not in the token, so
+  // the new profile starts as "Student". Save the real name while we have it.
+  const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 100);
+  if (fullName) {
+    await supabase.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
+  }
+  return data.session;
 }
 
 /** Signs out and deletes the saved session from secure storage. */

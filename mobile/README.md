@@ -32,6 +32,14 @@ other (for example on school Wi-Fi), run `npx expo start --tunnel` instead.
   first time; later opens are faster. Don't close Expo Go while offline — it
   reloads the app from your computer.
 
+### Development build (needed for Sign in with Apple and screenshot import)
+
+Expo Go can't run the screenshot text reader, and Sign in with Apple there
+signs in as Expo Go, not this app. For those, install this app's own
+development build once per phone (see
+[`docs/device-testing.md`](../docs/device-testing.md#2-register-the-iphone-then-make-development-builds)),
+then run `npx expo start --dev-client` and scan the QR code.
+
 ## Cloud API (optional)
 
 The app works fully offline. To use the cloud API (sign-in, grades snapshot,

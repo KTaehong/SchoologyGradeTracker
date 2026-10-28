@@ -14,6 +14,7 @@ export {
   getSession,
   oauthRedirectUrl,
   onSessionChange,
+  signInWithApple,
   signInWithEmail,
   signInWithProvider,
   signOut,

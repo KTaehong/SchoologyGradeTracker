@@ -5,11 +5,13 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import {
   errorMessage,
   isApiConfigured,
+  signInWithApple,
   signInWithEmail,
   signInWithProvider,
   signUpWithEmail,
   type OAuthProvider,
 } from '@/api';
+import { AppleSignInButton } from '@/components/apple-sign-in-button';
 import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -89,9 +91,10 @@ export default function SignInScreen() {
       }
     });
 
-  const continueWith = (provider: OAuthProvider) =>
+  const continueWith = (provider: OAuthProvider | 'apple-native') =>
     run(async () => {
-      const session = await signInWithProvider(provider);
+      const session =
+        provider === 'apple-native' ? await signInWithApple() : await signInWithProvider(provider);
       if (session) {
         router.back();
       }
@@ -109,7 +112,13 @@ export default function SignInScreen() {
             never needed.
           </ThemedText>
 
-          {signInProviders(Platform.OS).map(({ provider, label }) => (
+          <AppleSignInButton
+            signUp={signingUp}
+            disabled={busy}
+            onPress={() => continueWith('apple-native')}
+          />
+
+          {signInProviders().map(({ provider, label }) => (
             <Button
               key={provider}
               label={label}
@@ -199,4 +208,5 @@ const styles = StyleSheet.create({
   or: {
     textAlign: 'center',
   },
+
 });
