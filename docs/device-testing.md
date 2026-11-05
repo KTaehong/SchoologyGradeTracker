@@ -170,3 +170,48 @@ It needs the development build from step 2; in Expo Go the screen says "Not avai
 
 **Done when:** one real screenshot reads with the right scores on each phone, and
 its text is a test case. Saving the rows into the class is the next part of T2.2.
+
+## 8. Saved-report import (T2.3): one real Schoology Grades page
+
+This adds `expo-document-picker`, a new native module, so **make new development
+builds first** (step 2). Expo Go already includes it, so Expo Go works too.
+
+1. On a computer, open Schoology in a browser → **Grades** (or one class →
+   Grades). Expand every grading period so all the rows show.
+2. Save the page: **File → Save Page As… → "Web Page, HTML only"**.
+3. Get the `.html` file onto each phone (AirDrop, email it to yourself, or Google
+   Drive → "Save to Files" / "Download").
+4. Grade Tracker → Add grades → **Import a saved report** → **Choose the saved file**.
+5. Check each class's name, its number of periods, categories, and assignments,
+   and its percent against Schoology. Then tap **Import**.
+6. Open the class and compare each category's weight and percent with Schoology.
+7. Import the same file again: with **Replace … I already have** on, you should
+   still have one copy of each class.
+
+If a number is wrong, send the saved `.html` file (remove other people's names
+first) so it can become a test in
+[`report-parser.test.ts`](../mobile/src/import/__tests__/report-parser.test.ts).
+
+**Done when:** a real report imports on both phones with the right structure,
+weights, and scores, and the percents match Schoology to one decimal place.
+
+## 9. Upcoming from the Schoology calendar feed (T2.4)
+
+1. In a browser, open Schoology → **Calendar** → the gear (or ⋯) menu → **iCal
+   Feed**, and copy the link (it starts with `webcal://`). Treat it like a
+   password: do not paste it in chat, email, or a screenshot.
+2. Get the link onto the phone (for example, a note to yourself) and copy it.
+3. Grade Tracker → Settings → **Calendar feed** → paste → **Connect**. It should
+   say how many items it found.
+4. Open **Upcoming**. Compare the next week with Schoology's calendar: titles,
+   due days, and due times. Note which items say "Unfiled" (the feed does not
+   name the class; the app guesses from assignment names and class names).
+5. Pull down to refresh, and try **Refresh** with Wi-Fi off: it should show an
+   error and keep the items it already had.
+6. Close and reopen the app after an hour: the calendar updates on its own.
+
+The web build cannot read the real feed (Schoology does not allow it from a
+browser page). That is expected: the targets are iOS and Android.
+
+**Done when:** the agenda loads from the real feed on both phones, due times
+match Schoology, and items for classes you imported are filed under them.

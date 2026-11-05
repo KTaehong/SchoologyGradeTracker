@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { comingSoon, confirmAction } from '@/lib/coming-soon';
+import { formatRefreshed } from '@/lib/calendar-label';
 import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
 import { type ThemePreference, useTheme, useThemePreference } from '@/theme/theme-preference';
@@ -19,7 +20,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { loadSample, eraseAll, sync } = useGradebook();
+  const { loadSample, eraseAll, sync, calendar } = useGradebook();
 
   return (
     <Screen title="Settings">
@@ -32,8 +33,14 @@ export default function SettingsScreen() {
         footer="Your calendar link works like a password. It stays on this phone.">
         <Row
           label="Calendar feed"
-          detail="Not connected"
-          onPress={() => comingSoon('Connecting your Schoology calendar')}
+          detail={
+            calendar.connected === null
+              ? 'Checking…'
+              : calendar.connected
+                ? `Connected · updated ${formatRefreshed(calendar.refreshedAt).toLowerCase()}`
+                : 'Not connected'
+          }
+          onPress={() => router.push('/calendar-feed')}
         />
       </Section>
 

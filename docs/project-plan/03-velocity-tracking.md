@@ -25,8 +25,8 @@ Status key: ⬜ not started · 🔄 in progress · ✅ done · ⏭️ cut/deferr
 | T1.5 Grades home + course detail (F02, F03) | 2.25 | | ⬜ | Oct 9 | | |
 | T2.1 Manual entry (F06) | 1.5 | | ⬜ | Oct 16 | | |
 | T2.2 Screenshot import (F04) | 4.5 | | ⬜ | Oct 30 | | |
-| T2.3 Saved-report import (F05) | 3.0 | | ⬜ | Nov 6 | | |
-| T2.4 Upcoming assignments (F11) | 1.5 | | ⬜ | Nov 8 | | |
+| T2.3 Saved-report import (F05) | 3.0 | | 🔄 | Nov 6 | | Built + tested in Jest on a sample page (Nov 4). Left: one real saved report on iPhone + Android (device-testing.md §8). |
+| T2.4 Upcoming assignments (F11) | 1.5 | | 🔄 | Nov 8 | | Built + tested in Jest and on web with a test feed (Nov 4). Left: the real feed on both phones (device-testing.md §9). |
 | T3.1 What-If grades (F08) | 1.5 | | ⬜ | Nov 12 | | |
 | T3.2 Final-grade calculator (F09) | 1.5 | | ⬜ | Nov 15 | | |
 | T3.3 Semester grades (F10) | 1.5 | | ⬜ | Nov 18 | | |

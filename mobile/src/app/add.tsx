@@ -4,7 +4,6 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Row, Section } from '@/components/ui';
-import { comingSoon } from '@/lib/coming-soon';
 import { Spacing } from '@/theme/colors';
 
 /** The three ways to get grades into the app. */
@@ -25,7 +24,7 @@ export default function AddGradesScreen() {
           <Row
             label="Import a saved report"
             detail="Open a Schoology Grades page you saved as a file."
-            onPress={() => comingSoon('Saved-report import')}
+            onPress={() => router.push('/import-report')}
           />
         </Section>
 

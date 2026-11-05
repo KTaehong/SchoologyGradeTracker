@@ -39,11 +39,14 @@ import {
   deleteCourse as deleteCourseRow,
   eraseGradebook,
   getMeta,
+  importCourses,
   insertCourses,
   insertUpcoming,
   readCourses,
   readUpcoming,
+  removeFeedItems,
   removeForecast as removeForecastRow,
+  saveFeedItems,
   setForecast as setForecastRow,
   setMeta,
   updateAssignment,
@@ -52,12 +55,15 @@ import {
   type AssignmentFields,
   type CategoryFields,
   type CourseFields,
+  type FeedSaveResult,
   type NewPeriod,
 } from '@/db/gradebook-repo';
 import { openGradebookDatabase } from '@/db/open-database';
 import type { SqlDb } from '@/db/sql';
 import { computeCourseGrades } from '@/engine/grade-engine';
 import type { GradeCourse } from '@/engine/types';
+import { FEED_UID_PREFIX, fetchCalendar, normalizeFeedUrl, toFeedItems } from '@/import/calendar-feed';
+import { forgetCalendarLink, readCalendarLink, saveCalendarLink } from '@/import/calendar-link';
 import { attachAccount, attachedAccount, detachAccount } from '@/sync/account';
 import { onReconnect, useOnline } from '@/sync/connectivity';
 import { createSupabaseTransport, watchRemoteChanges } from '@/sync/supabase-sync';
@@ -72,8 +78,27 @@ type GradebookState =
   | { status: 'error'; message: string }
   | { status: 'ready'; courses: GradeCourse[]; grades: CourseGrades[]; upcoming: UpcomingItem[] };
 
+export type CalendarStatus = {
+  /** `null` while the saved link is still being looked up. */
+  connected: boolean | null;
+  refreshing: boolean;
+  /** When the feed was last read on this phone (ISO 8601). */
+  refreshedAt: string | null;
+  /** Why the last automatic refresh failed, if it did. */
+  error: string | null;
+};
+
 type GradebookContextValue = {
   state: GradebookState;
+  calendar: CalendarStatus;
+  /** Adds classes read from a saved report (F05), first deleting `replaceIds`. */
+  importReport: (courses: GradeCourse[], replaceIds: string[]) => Promise<void>;
+  /** Checks the link by loading it, then saves it and the feed's items (F11). */
+  connectCalendar: (link: string) => Promise<FeedSaveResult>;
+  /** Reads the feed again. Rejects with a message for the student. */
+  refreshCalendar: () => Promise<FeedSaveResult>;
+  /** Forgets the link and removes the feed's items. */
+  disconnectCalendar: () => Promise<void>;
   /** Sync progress, or `null` when the gradebook is only on this phone (signed out). */
   sync: SyncStatus | null;
   online: boolean;
@@ -109,6 +134,9 @@ const GradebookContext = createContext<GradebookContextValue | null>(null);
 /** Wait this long after a change before syncing, so a burst of edits goes in one push. */
 const PUSH_DELAY_MS = 1500;
 const LEGACY_IMPORTED_KEY = 'legacy_imported';
+const CALENDAR_REFRESHED_KEY = 'calendar_refreshed_at';
+/** Re-read the calendar on launch when it is older than this. */
+const CALENDAR_STALE_MS = 60 * 60 * 1000;
 
 const newId = () => Crypto.randomUUID();
 
@@ -136,6 +164,12 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
   const session = useSession();
   const online = useOnline();
   const userId = session.status === 'signed_in' ? session.session.user.id : null;
+  const [calendar, setCalendar] = useState<CalendarStatus>({
+    connected: null,
+    refreshing: false,
+    refreshedAt: null,
+    error: null,
+  });
 
   const reload = useCallback(async (database: SqlDb) => {
     const [courses, upcoming] = await Promise.all([readCourses(database), readUpcoming(database)]);
@@ -213,6 +247,45 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     };
   }, [db, userId, reload]);
 
+  /** Reads the feed at `url` into the gradebook. */
+  const loadFeed = useCallback(async (database: SqlDb, url: string) => {
+    const events = await fetchCalendar(url);
+    const items = toFeedItems(events, await readCourses(database));
+    const result = await saveFeedItems(database, newId, items, FEED_UID_PREFIX);
+    const refreshedAt = new Date().toISOString();
+    await setMeta(database, CALENDAR_REFRESHED_KEY, refreshedAt);
+    return { result, refreshedAt };
+  }, []);
+
+  // Is a calendar connected? If so and it is stale, read it again.
+  useEffect(() => {
+    if (!db) return;
+    let cancelled = false;
+    (async () => {
+      const [link, refreshedAt] = await Promise.all([
+        readCalendarLink().catch(() => null),
+        getMeta(db, CALENDAR_REFRESHED_KEY),
+      ]);
+      if (cancelled) return;
+      setCalendar((c) => ({ ...c, connected: link !== null, refreshedAt }));
+      const stale = !refreshedAt || Date.now() - new Date(refreshedAt).getTime() > CALENDAR_STALE_MS;
+      if (!link || !stale) return;
+      setCalendar((c) => ({ ...c, refreshing: true }));
+      try {
+        const { refreshedAt: at } = await loadFeed(db, link);
+        if (!cancelled) setCalendar((c) => ({ ...c, refreshing: false, refreshedAt: at, error: null }));
+        await changedRef.current?.(db);
+      } catch (e) {
+        if (!cancelled) {
+          setCalendar((c) => ({ ...c, refreshing: false, error: e instanceof Error ? e.message : String(e) }));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [db, loadFeed]);
+
   /** After a change made here: redraw now, push a moment later. */
   const changed = useCallback(
     async (database: SqlDb) => {
@@ -225,6 +298,8 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     },
     [reload],
   );
+  const changedRef = useRef<typeof changed | null>(null);
+  changedRef.current = changed;
 
   const value = useMemo<GradebookContextValue>(() => {
     const edit = async (action: (database: SqlDb) => Promise<void>) => {
@@ -232,8 +307,42 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       await action(db);
       await changed(db);
     };
+    const refreshWith = async (url: string) => {
+      if (!db) throw new Error('The gradebook is still opening. Try again in a moment.');
+      setCalendar((c) => ({ ...c, refreshing: true }));
+      try {
+        const { result, refreshedAt } = await loadFeed(db, url);
+        setCalendar((c) => ({ ...c, connected: true, refreshing: false, refreshedAt, error: null }));
+        await changed(db);
+        return result;
+      } catch (e) {
+        setCalendar((c) => ({ ...c, refreshing: false }));
+        throw e;
+      }
+    };
     return {
       state,
+      calendar,
+      importReport: (courses, replaceIds) => edit((d) => importCourses(d, courses, replaceIds)),
+      connectCalendar: async (link) => {
+        const url = normalizeFeedUrl(link);
+        const result = await refreshWith(url);
+        await saveCalendarLink(url);
+        return result;
+      },
+      refreshCalendar: async () => {
+        const url = await readCalendarLink();
+        if (!url) throw new Error('Connect your Schoology calendar in Settings first.');
+        return refreshWith(url);
+      },
+      disconnectCalendar: async () => {
+        await forgetCalendarLink();
+        await edit(async (d) => {
+          await removeFeedItems(d, FEED_UID_PREFIX);
+          await setMeta(d, CALENDAR_REFRESHED_KEY, null);
+        });
+        setCalendar({ connected: false, refreshing: false, refreshedAt: null, error: null });
+      },
       // Only while an account is attached; signed out the status is meaningless.
       sync: db && userId && isApiConfigured() ? sync : null,
       online,
@@ -284,7 +393,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         }
       },
     };
-  }, [state, sync, online, db, userId, changed, reload]);
+  }, [state, calendar, sync, online, db, userId, changed, reload, loadFeed]);
 
   return <GradebookContext.Provider value={value}>{children}</GradebookContext.Provider>;
 }
