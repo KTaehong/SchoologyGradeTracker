@@ -21,6 +21,15 @@ import { CHILDREN, SYNC_TABLES, type SyncTable } from './tables';
 
 export type Source = 'manual' | 'screenshot' | 'report' | 'sample';
 
+/** One calendar-feed item to save (see `saveFeedItems`). */
+export type FeedItemInput = {
+  externalUid: string;
+  title: string;
+  dueAt: string;
+  url: string | null;
+  courseId: string | null;
+};
+
 type CourseRow = {
   id: string;
   name: string;
@@ -146,7 +155,12 @@ const bool = (value: boolean) => (value ? 1 : 0);
 
 /** Adds whole courses (for example the sample, or an import). */
 export async function insertCourses(db: SqlDb, courses: GradeCourse[], source: Source): Promise<void> {
-  await db.transaction(async () => {
+  await db.transaction(() => insertCourseRows(db, courses, source));
+}
+
+/** The body of `insertCourses`, for use inside another transaction. */
+async function insertCourseRows(db: SqlDb, courses: GradeCourse[], source: Source): Promise<void> {
+  {
     for (const c of courses) {
       await db.run(
         `insert into courses (id, name, teacher, grading_mode, position, source, dirty)
@@ -188,6 +202,127 @@ export async function insertCourses(db: SqlDb, courses: GradeCourse[], source: S
           }
         }
       }
+    }
+  }
+}
+
+/**
+ * Adds classes read from a saved report (F05). Classes listed in `replaceIds`
+ * are deleted first, so importing the same report again updates instead of
+ * duplicating. New classes go after the ones already here.
+ */
+export async function importCourses(db: SqlDb, courses: GradeCourse[], replaceIds: string[]): Promise<void> {
+  await db.transaction(async () => {
+    for (const id of replaceIds) {
+      await requireRow(db, 'courses', id, 'class');
+      await deleteRow(db, 'courses', id);
+    }
+    const last = await first<{ n: number | null }>(db, 'select max(position) as n from courses where deleted = 0');
+    const offset = last?.n ?? 0;
+    await insertCourseRows(
+      db,
+      courses.map((c, i) => ({ ...c, position: offset + i + 1 })),
+      'report',
+    );
+  });
+}
+
+type FeedRow = {
+  id: string;
+  external_uid: string;
+  course_id: string | null;
+  title: string;
+  due_at: string;
+  url: string | null;
+  deleted: number;
+};
+
+export type FeedSaveResult = { added: number; updated: number; removed: number };
+
+/**
+ * Makes the calendar-feed items on this phone match a fresh fetch (F11):
+ * new items are added, changed ones updated in place (same row id, so other
+ * devices see an edit, not a new item), and items no longer in the feed are
+ * deleted. Rows are matched on `external_uid`; other upcoming items (like the
+ * sample's) are left alone. A class picked earlier is kept when the new fetch
+ * could not place the item.
+ */
+export async function saveFeedItems(
+  db: SqlDb,
+  newId: () => string,
+  items: FeedItemInput[],
+  uidPrefix: string,
+): Promise<FeedSaveResult> {
+  return db.transaction(async () => {
+    const rows = await db.all<FeedRow>(
+      'select id, external_uid, course_id, title, due_at, url, deleted from upcoming_items where external_uid like ?',
+      [`${uidPrefix}%`],
+    );
+    // Prefer a live row; two devices may each have made one for the same item.
+    const byUid = new Map<string, FeedRow>();
+    const extras: FeedRow[] = [];
+    for (const row of rows) {
+      const seen = byUid.get(row.external_uid);
+      if (!seen || (seen.deleted && !row.deleted)) {
+        byUid.set(row.external_uid, row);
+      } else if (!row.deleted) {
+        extras.push(row);
+      }
+    }
+
+    const result: FeedSaveResult = { added: 0, updated: 0, removed: 0 };
+    const keep = new Set<string>();
+    for (const item of items) {
+      keep.add(item.externalUid);
+      const row = byUid.get(item.externalUid);
+      const courseId = item.courseId ?? row?.course_id ?? null;
+      if (!row) {
+        await db.run(
+          `insert into upcoming_items (id, course_id, external_uid, title, due_at, url, dirty)
+           values (?, ?, ?, ?, ?, ?, 1)`,
+          [newId(), courseId, item.externalUid, item.title, item.dueAt, item.url],
+        );
+        result.added++;
+        continue;
+      }
+      const same =
+        !row.deleted &&
+        row.title === item.title &&
+        row.due_at === item.dueAt &&
+        row.url === item.url &&
+        row.course_id === courseId;
+      if (!same) {
+        await db.run(
+          `update upcoming_items set course_id = ?, title = ?, due_at = ?, url = ?, deleted = 0, dirty = dirty + 1
+           where id = ?`,
+          [courseId, item.title, item.dueAt, item.url, row.id],
+        );
+        if (row.deleted) result.added++;
+        else result.updated++;
+      }
+    }
+    for (const row of byUid.values()) {
+      if (!row.deleted && !keep.has(row.external_uid)) {
+        await deleteRow(db, 'upcoming_items', row.id);
+        result.removed++;
+      }
+    }
+    for (const row of extras) {
+      await deleteRow(db, 'upcoming_items', row.id);
+    }
+    return result;
+  });
+}
+
+/** Deletes every calendar-feed item (when the student disconnects the feed). */
+export async function removeFeedItems(db: SqlDb, uidPrefix: string): Promise<void> {
+  await db.transaction(async () => {
+    const rows = await db.all<{ id: string }>(
+      'select id from upcoming_items where deleted = 0 and external_uid like ?',
+      [`${uidPrefix}%`],
+    );
+    for (const row of rows) {
+      await deleteRow(db, 'upcoming_items', row.id);
     }
   });
 }
