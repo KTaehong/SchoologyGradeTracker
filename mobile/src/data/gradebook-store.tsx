@@ -217,8 +217,11 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       return;
     }
     let stopped = false;
+    // Nothing syncs until the gradebook belongs to this account (see `ready`).
+    const attached = attachAccount(db, userId);
     const engine = new SyncEngine({
       db,
+      ready: attached,
       transport: createSupabaseTransport(createRpcCaller(getSupabase)),
       onStatus: (status) => {
         if (!stopped) setSync(status);
@@ -233,10 +236,14 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       if (!stopped) engine.sync();
     };
     (async () => {
-      await attachAccount(db, userId);
-      if (stopped) return;
-      await reload(db);
-      await engine.refreshStatus();
+      try {
+        await attached;
+        if (stopped) return;
+        await reload(db);
+        await engine.refreshStatus();
+      } catch {
+        // The sync below reports a failed account switch as a sync error.
+      }
       syncSoon();
     })();
 

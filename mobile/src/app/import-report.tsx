@@ -52,12 +52,18 @@ export default function ImportReportScreen() {
   const { busy, error, save } = useSave();
 
   async function pick() {
-    const result = await DocumentPicker.getDocumentAsync({
-      // Saved pages are often typed oddly (.htm, .html, or no type at all), so
-      // accept anything and check the contents instead.
-      type: '*/*',
-      copyToCacheDirectory: true,
-    });
+    let result: DocumentPicker.DocumentPickerResult;
+    try {
+      result = await DocumentPicker.getDocumentAsync({
+        // Saved pages are often typed oddly (.htm, .html, or no type at all), so
+        // accept anything and check the contents instead.
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+    } catch (e) {
+      setPicked({ status: 'error', message: e instanceof Error ? e.message : String(e) });
+      return;
+    }
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
     setPicked({ status: 'reading' });

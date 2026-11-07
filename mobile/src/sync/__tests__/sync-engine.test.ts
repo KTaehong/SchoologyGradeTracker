@@ -275,6 +275,38 @@ describe('sync', () => {
   });
 });
 
+describe('waiting for the account', () => {
+  it('does not pull or push until `ready` settles', async () => {
+    const server = new FakeSyncServer();
+    const db = await createTestDatabase();
+    await loadSample(db);
+    let attach!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      attach = resolve;
+    });
+    const engine = new SyncEngine({ db, transport: server.transport(), ready });
+    const syncing = engine.sync();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(server.pushes).toBe(0);
+    await attachAccount(db, 'ana');
+    attach();
+    await syncing;
+    expect(server.pushes).toBe(1);
+  });
+
+  it('sends nothing and reports an error when the account switch fails', async () => {
+    const server = new FakeSyncServer();
+    const db = await createTestDatabase();
+    await loadSample(db);
+    const ready = Promise.reject(new Error('disk full'));
+    ready.catch(() => undefined);
+    const engine = new SyncEngine({ db, transport: server.transport(), ready });
+    await engine.sync();
+    expect(server.pushes).toBe(0);
+    expect(engine.getStatus()).toMatchObject({ state: 'error', error: 'disk full' });
+  });
+});
+
 describe('accounts', () => {
   it('drops the untouched sample on first sign-in instead of uploading it', async () => {
     const db = await createTestDatabase();

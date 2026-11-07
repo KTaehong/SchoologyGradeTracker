@@ -23,6 +23,13 @@ export function comingSoon(feature: string) {
   Alert.alert('Coming soon', message);
 }
 
+/** Runs a button's action and shows a message if it fails (instead of failing silently). */
+export function runOrWarn(failureTitle: string, action: () => Promise<void> | void): void {
+  Promise.resolve()
+    .then(action)
+    .catch((e: unknown) => showMessage(failureTitle, errorMessage(e)));
+}
+
 /** Asks before replacing or erasing data, and says so if it then fails. */
 export function confirmAction(
   title: string,
