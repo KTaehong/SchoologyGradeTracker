@@ -1,14 +1,18 @@
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
+import { PeriodPicker } from '@/components/period-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { canReadScreenshots, readScreenshotText } from '@/import/read-screenshot';
 import { matchCategory, matchCourse, parseScreenshot, type ParsedRow } from '@/import/screenshot-parser';
+import { planScreenshotRows } from '@/lib/screenshot-plan';
+import { useSave } from '@/lib/use-save';
 import { Spacing } from '@/theme/colors';
 
 type Reading =
@@ -25,15 +29,23 @@ function scoreLabel(row: ParsedRow): string {
   return row.max === null ? word : `${word} (out of ${row.max})`;
 }
 
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 /**
- * Screenshot import (F04), first step: pick or take a photo of a Schoology
- * grades page and see what the phone read from it. Saving the rows into a
- * class comes next (T2.2).
+ * Screenshot import (F04): pick or take a photo of a Schoology grades page,
+ * check what the phone read from it, choose the class and grading period, and
+ * save the rows. Each row goes to the category named by its heading, or to
+ * one the student picks.
  */
 export default function ImportScreenshotScreen() {
-  const { state } = useGradebook();
+  const { state, importScreenshot } = useGradebook();
   const [reading, setReading] = useState<Reading>({ status: 'idle' });
   const [showText, setShowText] = useState(false);
+  /** The student's choices; `undefined` = use the automatic guess. */
+  const [pickedCourseId, setPickedCourseId] = useState<string | undefined>();
+  const [pickedPeriod, setPickedPeriod] = useState<number | undefined>();
+  const [fallbackId, setFallbackId] = useState<string | null>(null);
+  const { busy, error, save } = useSave();
 
   if (!canReadScreenshots()) {
     return (
@@ -64,6 +76,9 @@ export default function ImportScreenshotScreen() {
       return;
     }
     setReading({ status: 'reading' });
+    setPickedCourseId(undefined);
+    setPickedPeriod(undefined);
+    setFallbackId(null);
     try {
       setReading({ status: 'done', lines: await readScreenshotText(picked.assets[0].uri) });
     } catch (e) {
@@ -73,8 +88,29 @@ export default function ImportScreenshotScreen() {
 
   const courses = state.status === 'ready' ? state.courses : [];
   const parsed = reading.status === 'done' ? parseScreenshot(reading.lines) : null;
-  const course = reading.status === 'done' ? matchCourse(reading.lines, courses) : null;
-  const categories = course?.periods.flatMap((p) => p.categories) ?? [];
+  const guessed = reading.status === 'done' ? matchCourse(reading.lines, courses) : null;
+  const course = courses.find((c) => c.id === (pickedCourseId ?? guessed?.id)) ?? null;
+  const periods = course?.periods ?? [];
+  // By default, the period whose categories match the most headings on the picture.
+  const headings = parsed?.rows.map((r) => r.category) ?? [];
+  const bestPeriod = periods.reduce(
+    (best, p, i) => {
+      const hits = headings.filter((h) => matchCategory(h, p.categories)).length;
+      return hits > best.hits ? { index: i, hits } : best;
+    },
+    { index: 0, hits: 0 },
+  ).index;
+  const periodIndex = Math.min(pickedPeriod ?? bestPeriod, Math.max(periods.length - 1, 0));
+  const categories = periods[periodIndex]?.categories ?? [];
+  const plan = parsed ? planScreenshotRows(parsed.rows, categories, fallbackId) : null;
+
+  const submit = () => {
+    if (!plan || !course) return;
+    save(
+      () => importScreenshot(plan.save),
+      () => router.replace({ pathname: '/course/[id]', params: { id: course.id } }),
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -96,16 +132,65 @@ export default function ImportScreenshotScreen() {
 
         {parsed ? (
           <>
-            <Section title="Class">
-              <Row
-                label={course ? course.name : 'Not found'}
-                detail={
-                  course
-                    ? 'Matched from the class name on the screenshot.'
-                    : 'The class name was not in the picture. You will pick the class before saving.'
-                }
-              />
+            <Section
+              title="Class"
+              footer={
+                guessed
+                  ? 'Matched from the class name on the screenshot. Tap another to change it.'
+                  : courses.length > 0
+                    ? 'The class name was not in the picture. Pick the class.'
+                    : undefined
+              }>
+              {courses.length === 0 ? (
+                <Row
+                  label="No classes yet"
+                  detail="Add the class first (Add grades → Add a class), then scan again."
+                />
+              ) : (
+                courses.map((c) => (
+                  <Row
+                    key={c.id}
+                    label={c.name}
+                    right={c.id === course?.id ? <ThemedText themeColor="accent">✓</ThemedText> : undefined}
+                    onPress={() => {
+                      setPickedCourseId(c.id);
+                      setPickedPeriod(undefined);
+                      setFallbackId(null);
+                    }}
+                  />
+                ))
+              )}
             </Section>
+
+            {course && periods.length > 1 ? (
+              <PeriodPicker
+                names={periods.map((p) => p.name)}
+                selected={periodIndex}
+                onSelect={(i) => {
+                  setPickedPeriod(i);
+                  setFallbackId(null);
+                }}
+              />
+            ) : null}
+
+            {course && plan && plan.unmatched > 0 ? (
+              <Section
+                title="Category for rows without a heading"
+                footer={
+                  categories.length === 0
+                    ? 'This grading period has no categories yet. Add one on the class page first.'
+                    : 'The heading above these rows was cut off or did not match a category.'
+                }>
+                {categories.map((k) => (
+                  <Row
+                    key={k.id}
+                    label={k.name}
+                    right={k.id === fallbackId ? <ThemedText themeColor="accent">✓</ThemedText> : undefined}
+                    onPress={() => setFallbackId(k.id)}
+                  />
+                ))}
+              </Section>
+            ) : null}
 
             {parsed.rows.length === 0 ? (
               <EmptyState
@@ -120,9 +205,10 @@ export default function ImportScreenshotScreen() {
                     ? 'Some names and scores did not line up. Check them before saving.'
                     : undefined
                 }>
-                {parsed.rows.map((row, i) => {
-                  const category = matchCategory(row.category, categories);
-                  const where = category?.name ?? row.category ?? 'No category';
+                {(plan?.rows ?? []).map(({ row, category, skip }, i) => {
+                  const where = !course
+                    ? (row.category ?? 'No category')
+                    : (skip ?? category?.name ?? 'No category');
                   return (
                     <Row
                       key={`${i}-${row.title}`}
@@ -143,6 +229,24 @@ export default function ImportScreenshotScreen() {
                   <Row key={`s${i}`} label={s} detail="Score with no name" />
                 ))}
               </Section>
+            ) : null}
+
+            {course && plan && plan.save.length > 0 ? (
+              <>
+                {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
+                <Button
+                  label={busy ? 'Saving…' : `Save ${plural(plan.save.length, 'assignment')} to ${course.name}`}
+                  variant="primary"
+                  disabled={busy}
+                  onPress={submit}
+                />
+                <ThemedText type="small" themeColor="textSecondary">
+                  {plan.save.length < plan.rows.length
+                    ? `${plural(plan.rows.length - plan.save.length, 'row')} will be skipped (see above). `
+                    : ''}
+                  Assignments already in the category are updated, not added twice.
+                </ThemedText>
+              </>
             ) : null}
 
             <Button

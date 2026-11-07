@@ -5,6 +5,8 @@
 import { first, type SqlDb, type SqlValue } from '@/db/sql';
 import { BOOLEAN_COLUMNS, CHILDREN, COLUMNS, isSyncTable, SYNC_TABLES, type SyncTable } from '@/db/tables';
 
+import { fitToServer } from './server-limits';
+
 export type WireRow = Record<string, unknown>;
 export type Deletion = { table_name: string; row_id: string };
 
@@ -20,7 +22,7 @@ function toWire(table: SyncTable, row: Record<string, SqlValue>): WireRow {
     const value = row[column];
     wire[column] = BOOLEAN_COLUMNS.has(column) ? value === 1 : value;
   }
-  return wire;
+  return fitToServer(table, wire);
 }
 
 function toSql(column: string, value: unknown): SqlValue {
@@ -98,6 +100,19 @@ export async function applyRemoteChanges(db: SqlDb, pull: ChangeSet): Promise<nu
         ]);
         if (local && local.dirty > 0) {
           continue;
+        }
+        if (table === 'upcoming_items' && row.external_uid) {
+          // This phone fetched the same calendar item under its own id and has
+          // not pushed it yet. The push makes the server keep this phone's copy
+          // (and delete the other), so taking the other here would show it twice.
+          const twin = await first<{ id: string }>(
+            db,
+            'select id from upcoming_items where external_uid = ? and id <> ? and deleted = 0 and dirty > 0',
+            [String(row.external_uid), String(row.id)],
+          );
+          if (twin) {
+            continue;
+          }
         }
         await db.run(
           upsert,

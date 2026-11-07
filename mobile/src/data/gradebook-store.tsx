@@ -24,7 +24,7 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 
-import { signOut as apiSignOut } from '@/api/auth';
+import { getSession, signOut as apiSignOut } from '@/api/auth';
 import { getSupabase, isApiConfigured } from '@/api/client';
 import type { CourseGrades, NewForecast } from '@/api/grades';
 import { createRpcCaller } from '@/api/rpc';
@@ -47,6 +47,7 @@ import {
   removeFeedItems,
   removeForecast as removeForecastRow,
   saveFeedItems,
+  saveScreenshotRows,
   setForecast as setForecastRow,
   setMeta,
   updateAssignment,
@@ -57,6 +58,8 @@ import {
   type CourseFields,
   type FeedSaveResult,
   type NewPeriod,
+  type ScreenshotRow,
+  type ScreenshotSaveResult,
 } from '@/db/gradebook-repo';
 import { openGradebookDatabase } from '@/db/open-database';
 import type { SqlDb } from '@/db/sql';
@@ -91,6 +94,8 @@ export type CalendarStatus = {
 type GradebookContextValue = {
   state: GradebookState;
   calendar: CalendarStatus;
+  /** Saves assignments read off a screenshot (F04). */
+  importScreenshot: (rows: ScreenshotRow[]) => Promise<ScreenshotSaveResult>;
   /** Adds classes read from a saved report (F05), first deleting `replaceIds`. */
   importReport: (courses: GradeCourse[], replaceIds: string[]) => Promise<void>;
   /** Checks the link by loading it, then saves it and the feed's items (F11). */
@@ -127,6 +132,8 @@ type GradebookContextValue = {
   syncNow: () => Promise<void>;
   /** Signs out and removes this phone's copy of the account's grades. */
   signOut: () => Promise<void>;
+  /** Permanently deletes the account and its cloud gradebook, then signs out. */
+  deleteAccount: () => Promise<void>;
 };
 
 const GradebookContext = createContext<GradebookContextValue | null>(null);
@@ -243,6 +250,10 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       stopRealtime();
       stopNet();
       appState.remove();
+      if (pushTimer.current) {
+        clearTimeout(pushTimer.current);
+        pushTimer.current = null;
+      }
       if (engineRef.current === engine) engineRef.current = null;
     };
   }, [db, userId, reload]);
@@ -324,6 +335,13 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       state,
       calendar,
       importReport: (courses, replaceIds) => edit((d) => importCourses(d, courses, replaceIds)),
+      importScreenshot: async (rows) => {
+        let result: ScreenshotSaveResult = { added: 0, updated: 0 };
+        await edit(async (d) => {
+          result = await saveScreenshotRows(d, newId, rows);
+        });
+        return result;
+      },
       connectCalendar: async (link) => {
         const url = normalizeFeedUrl(link);
         const result = await refreshWith(url);
@@ -386,7 +404,25 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         // Last chance to send changes made here.
         if (engineRef.current) await engineRef.current.sync();
-        await apiSignOut();
+        try {
+          await apiSignOut();
+        } catch (e) {
+          // With no connection the server cannot be told, but the phone
+          // still forgets the session. Only a session that is still here
+          // means the sign-out really failed.
+          if (await getSession().catch(() => null)) throw e;
+        }
+        if (db) {
+          await detachAccount(db);
+          await reload(db);
+        }
+      },
+      deleteAccount: async () => {
+        await createRpcCaller(getSupabase)('delete_my_account');
+        if (pushTimer.current) clearTimeout(pushTimer.current);
+        // The account is gone, so the server may refuse the sign-out; the
+        // phone forgets the session either way.
+        await apiSignOut().catch(() => undefined);
         if (db) {
           await detachAccount(db);
           await reload(db);

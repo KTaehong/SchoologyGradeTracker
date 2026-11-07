@@ -13,6 +13,8 @@
  * Plain functions with no phone APIs, so all of it is tested in Jest.
  */
 
+import { calendarDate } from '@/sync/server-limits';
+
 export type RowStatus = 'graded' | 'missing' | 'excused' | 'ungraded';
 
 export type ParsedRow = {
@@ -95,12 +97,8 @@ function scoreOnly(line: string): Score | null {
   return m ? readScore(m[1], m[2]) : null;
 }
 
-function isoDate(year: number, month: number, day: number): string | null {
-  if (month < 1 || month > 12 || day < 1 || day > 31) {
-    return null;
-  }
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
+/** `YYYY-MM-DD`, or `null` for a day that does not exist (like 2/31). */
+const isoDate = calendarDate;
 
 /** Finds a due date in the line and returns it with the line minus the date. */
 function takeDate(line: string): { date: string | null; rest: string } {

@@ -213,7 +213,8 @@ async function insertCourseRows(db: SqlDb, courses: GradeCourse[], source: Sourc
  */
 export async function importCourses(db: SqlDb, courses: GradeCourse[], replaceIds: string[]): Promise<void> {
   await db.transaction(async () => {
-    for (const id of replaceIds) {
+    // Two imported classes can share a name, and so the same old class.
+    for (const id of new Set(replaceIds)) {
       await requireRow(db, 'courses', id, 'class');
       await deleteRow(db, 'courses', id);
     }
@@ -626,6 +627,74 @@ export async function deleteAssignment(db: SqlDb, id: string): Promise<void> {
   await db.transaction(async () => {
     await requireAssignment(db, id);
     await deleteRow(db, 'assignments', id);
+  });
+}
+
+/** One assignment read off a screenshot, going into `categoryId` (F04). */
+export type ScreenshotRow = {
+  categoryId: string;
+  title: string;
+  dueDate: string | null;
+  maxScore: number;
+  /** `null` = not graded yet. */
+  actualScore: number | null;
+  excused: boolean;
+};
+
+export type ScreenshotSaveResult = { added: number; updated: number };
+
+const sameTitle = (title: string) => title.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Saves rows read off a screenshot (F04). A row whose category already has an
+ * assignment with the same name updates that assignment's score (so scanning
+ * the same page again does not add copies); the rest are added. Forecasts are
+ * kept; a real score replaces a forecast-only placeholder.
+ */
+export async function saveScreenshotRows(
+  db: SqlDb,
+  newId: () => string,
+  rows: ScreenshotRow[],
+): Promise<ScreenshotSaveResult> {
+  return db.transaction(async () => {
+    const result: ScreenshotSaveResult = { added: 0, updated: 0 };
+    for (const row of rows) {
+      await requireRow(db, 'categories', row.categoryId, 'category');
+      const existing = (
+        await db.all<{ id: string; title: string; is_placeholder: number }>(
+          'select id, title, is_placeholder from assignments where category_id = ? and deleted = 0',
+          [row.categoryId],
+        )
+      ).find((a) => sameTitle(a.title) === sameTitle(row.title));
+      if (existing) {
+        const placeholder = existing.is_placeholder === 1 && row.actualScore === null;
+        await db.run(
+          `update assignments set max_score = ?, actual_score = ?, excused = ?, is_placeholder = ?,
+             due_date = coalesce(?, due_date), dirty = dirty + 1
+           where id = ?`,
+          [row.maxScore, row.actualScore, bool(row.excused), bool(placeholder), row.dueDate, existing.id],
+        );
+        result.updated++;
+      } else {
+        await db.run(
+          `insert into assignments (id, category_id, title, due_date, max_score, actual_score,
+             excused, source, position, dirty)
+           values (?, ?, ?, ?, ?, ?, ?, 'screenshot', ?, 1)`,
+          [
+            newId(),
+            row.categoryId,
+            row.title,
+            row.dueDate,
+            row.maxScore,
+            row.actualScore,
+            bool(row.excused),
+            await nextPosition(db, 'assignments', 'category_id', row.categoryId),
+          ],
+        );
+        result.added++;
+      }
+    }
+    return result;
   });
 }
 

@@ -2,12 +2,14 @@ import type { OAuthProvider } from '@/api/auth';
 
 export type ProviderButton = { provider: OAuthProvider; label: string };
 
-/** The "Continue with …" buttons that open the provider in a browser. */
+/**
+ * The "Continue with …" buttons that open the provider in a browser. Only
+ * providers turned on in Supabase belong here: a button for one that is off
+ * fails every time. Microsoft ('azure') needs an Azure directory first; add
+ * `{ provider: 'azure', label: 'Continue with Microsoft' }` once it is set up.
+ */
 export function signInProviders(): ProviderButton[] {
-  return [
-    { provider: 'google', label: 'Continue with Google' },
-    { provider: 'azure', label: 'Continue with Microsoft' },
-  ];
+  return [{ provider: 'google', label: 'Continue with Google' }];
 }
 
 /**

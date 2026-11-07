@@ -10,6 +10,7 @@ export function HeaderButton({ label, onPress }: { label: string; onPress: () =>
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
