@@ -9,6 +9,7 @@ import {
   readUpcoming,
   removeFeedItems,
   saveFeedItems,
+  saveScreenshotRows,
   type FeedItemInput,
 } from '@/db/gradebook-repo';
 import type { SqlDb } from '@/db/sql';
@@ -33,6 +34,14 @@ const report = (title: string, score: string) =>
   parseReportLines([title, 'Quarter 1 (100%)', 'Tests (100%)', `Unit Test ${score}`], newId).courses;
 
 describe('importCourses', () => {
+  it('replaces one class with two imported classes of the same name', async () => {
+    await importCourses(db, report('Debate', '4 / 5'), []);
+    const [old] = await readCourses(db);
+    const twins = [...report('Debate', '5 / 5'), ...report('Debate', '3 / 5')];
+    await importCourses(db, twins, [old.id, old.id]);
+    expect((await readCourses(db)).map((c) => c.name)).toEqual(['Debate', 'Debate']);
+  });
+
   it('adds report classes after the existing ones, marked as from a report', async () => {
     await addCourse(db, newId, { name: 'Art', teacher: null, gradingMode: 'points' }, [{ name: 'Q1', kind: 'quarter' }]);
     await importCourses(db, report('Biology: P3', '45 / 50'), []);
@@ -148,5 +157,38 @@ describe('saveFeedItems', () => {
     await saveFeedItems(db, newId, [item('a', 'Essay', '2026-11-10T04:59:00.000Z')], FEED_UID_PREFIX);
     await removeFeedItems(db, FEED_UID_PREFIX);
     expect(await readUpcoming(db)).toEqual([]);
+  });
+});
+
+describe('saveScreenshotRows', () => {
+  it('adds new rows and updates ones already in the category', async () => {
+    await importCourses(db, report('Biology: P3', '45 / 50'), []);
+    const [course] = await readCourses(db);
+    const tests = course.periods[0].categories[0];
+
+    const first = await saveScreenshotRows(db, newId, [
+      { categoryId: tests.id, title: 'unit  test', dueDate: '2026-11-02', maxScore: 50, actualScore: 48, excused: false },
+      { categoryId: tests.id, title: 'Unit 2 Test', dueDate: null, maxScore: 40, actualScore: null, excused: false },
+    ]);
+    expect(first).toEqual({ added: 1, updated: 1 });
+    const again = await saveScreenshotRows(db, newId, [
+      { categoryId: tests.id, title: 'Unit 2 Test', dueDate: null, maxScore: 40, actualScore: 36, excused: false },
+    ]);
+    expect(again).toEqual({ added: 0, updated: 1 });
+
+    const rows = (await readCourses(db))[0].periods[0].categories[0].assignments;
+    expect(rows.map((a) => [a.title, a.actualScore, a.maxScore, a.dueDate])).toEqual([
+      ['Unit Test', 48, 50, '2026-11-02'],
+      ['Unit 2 Test', 36, 40, null],
+    ]);
+  });
+
+  it('saves nothing when a category is gone', async () => {
+    await expect(
+      saveScreenshotRows(db, newId, [
+        { categoryId: 'missing', title: 'A', dueDate: null, maxScore: 1, actualScore: 1, excused: false },
+      ]),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await readCourses(db)).toEqual([]);
   });
 });

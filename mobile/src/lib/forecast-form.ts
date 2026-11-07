@@ -3,6 +3,7 @@
  * student sees a clear message right away.
  */
 import type { NewForecast } from '@/api/grades';
+import { MAX_SCORE, NAME_LIMITS } from '@/sync/server-limits';
 
 export type FormResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -19,6 +20,9 @@ export function validateForecastScore(text: string): FormResult<number> {
   const score = parseScore(text);
   if (score === null) {
     return { ok: false, error: 'Enter the points you expect, for example 8 or 8.5.' };
+  }
+  if (score > MAX_SCORE) {
+    return { ok: false, error: 'That score is too large.' };
   }
   return { ok: true, value: score };
 }
@@ -40,9 +44,15 @@ export function validateNewForecast(form: NewForecastForm): FormResult<NewForeca
   if (!title) {
     return { ok: false, error: 'Give the work a name, for example "Unit 4 Test".' };
   }
+  if (title.length > NAME_LIMITS.assignment) {
+    return { ok: false, error: `The name is too long (${NAME_LIMITS.assignment} characters at most).` };
+  }
   const maxScore = parseScore(form.maxScore);
   if (maxScore === null || maxScore <= 0) {
     return { ok: false, error: 'Points possible must be a number more than 0.' };
+  }
+  if (maxScore > MAX_SCORE) {
+    return { ok: false, error: 'That score is too large.' };
   }
   const forecast = validateForecastScore(form.forecastScore);
   if (!forecast.ok) {

@@ -3,8 +3,8 @@ import { describe, expect, it } from '@jest/globals';
 import { showsAppleButton, signInProviders } from '../sign-in-providers';
 
 describe('signInProviders', () => {
-  it('offers Google and Microsoft in the browser', () => {
-    expect(signInProviders().map((p) => p.provider)).toEqual(['google', 'azure']);
+  it('offers only providers that are turned on (Google)', () => {
+    expect(signInProviders().map((p) => p.provider)).toEqual(['google']);
   });
 });
 

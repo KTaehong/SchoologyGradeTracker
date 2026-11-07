@@ -22,6 +22,7 @@ import type {
   GradePeriod,
   PeriodKind,
 } from '@/engine/types';
+import { calendarDate, clipText, MAX_SCORE, MAX_WEIGHT, NAME_LIMITS } from '@/sync/server-limits';
 
 // ---------------------------------------------------------------------------
 // HTML → lines
@@ -120,10 +121,8 @@ type Draft = {
   category: GradeCategory | null;
 };
 
-function isoDate(year: number, month: number, day: number): string | null {
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
+/** `YYYY-MM-DD`, or `null` for a day that does not exist (like 2/31). */
+const isoDate = calendarDate;
 
 /** The due date on the line, as `YYYY-MM-DD`, and the line without it. */
 function takeDate(line: string): { date: string | null; rest: string } {
@@ -152,7 +151,7 @@ function readHeading(line: string): { name: string; weight: number | null } {
   const weight = WEIGHT.exec(line);
   const beforeWeight = weight ? line.slice(0, weight.index) : line;
   const name = beforeWeight.replace(TRAILING_SUMMARY, '').replace(/[:\s]+$/, '').trim();
-  return { name, weight: weight ? Number(weight[1]) : null };
+  return { name, weight: weight ? Math.min(Number(weight[1]), MAX_WEIGHT) : null };
 }
 
 function periodKind(name: string): PeriodKind {
@@ -183,7 +182,7 @@ export function parseReportLines(lines: string[], newId: () => string): ReportSu
   const startCourse = (name: string) => {
     draft.course = {
       id: newId(),
-      name,
+      name: clipText(name, NAME_LIMITS.course),
       teacher: null,
       gradingMode: 'points',
       position: courses.length + 1,
@@ -201,7 +200,7 @@ export function parseReportLines(lines: string[], newId: () => string): ReportSu
     const course = ensureCourse();
     draft.period = {
       id: newId(),
-      name,
+      name: clipText(name, NAME_LIMITS.period),
       kind: periodKind(name),
       semester: null,
       weight,
@@ -219,7 +218,7 @@ export function parseReportLines(lines: string[], newId: () => string): ReportSu
     const period = ensurePeriod();
     draft.category = {
       id: newId(),
-      name,
+      name: clipText(name, NAME_LIMITS.category),
       weight,
       dropLowest: 0,
       position: period.categories.length + 1,
@@ -269,11 +268,16 @@ export function parseReportLines(lines: string[], newId: () => string): ReportSu
     // 3) An assignment row.
     if (isRow) {
       const cut = score ? rest.slice(0, score.index) : rest;
-      const title = cleanTitle(cut.replace(TRAILING_SUMMARY, ''));
+      const title = clipText(cleanTitle(cut.replace(TRAILING_SUMMARY, '')), NAME_LIMITS.assignment);
       if (title.length === 0) continue;
+      lastPlain = null;
       const excused = EXCUSED.test(rest);
-      const max = score ? Number(score.max) : 0;
-      const earned = score?.earned && !/^[-–—]+$/.test(score.earned) ? Number(score.earned) : null;
+      const max = score ? Math.min(Number(score.max), MAX_SCORE) : 0;
+      const earned =
+        score?.earned && !/^[-–—]+$/.test(score.earned) ? Math.min(Number(score.earned), MAX_SCORE) : null;
+      // No points possible and nothing earned (a row with only a due date, or
+      // "— / 0"): it cannot change a grade, and the cloud cannot store it.
+      if (max <= 0 && !(earned !== null && earned > 0)) continue;
       const category = ensureCategory();
       const assignment: GradeAssignment = {
         id: newId(),
