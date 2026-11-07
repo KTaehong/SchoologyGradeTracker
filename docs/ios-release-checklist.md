@@ -58,17 +58,19 @@ would refuse fails a test instead of a student's phone.
 
 ## Must do before submitting (needs account access)
 
-- [ ] **Apply migration 7** to Supabase project `mjbujhsixgfaluhuvxnn`: paste
-      `supabase/migrations/20261107000700_delete_account.sql` into the SQL editor
-      and run it, then run `supabase/tests/delete_account_test.sql` (it rolls back).
-      Without it, Settings → Delete account shows an error.
-- [ ] **Turn on Sign in with Apple in Supabase** — it is currently OFF (checked
-      Nov 7 via the project's auth settings), so the Apple button on iPhone fails.
-      Steps: [device-testing.md § 1](device-testing.md). Apple requires this
-      option whenever Google sign-in is offered (Guideline 4.8).
-- [ ] Add a contact email / support page to `docs/privacy-policy.md`, host it
-      (for example GitHub Pages), and put both URLs in App Store Connect
-      (Privacy Policy URL and Support URL are required).
+- [x] **Migration 7 applied** to Supabase project `mjbujhsixgfaluhuvxnn`
+      (Nov 7). `delete_account_test.sql` passed there and rolled back; anonymous
+      calls to `delete_my_account` are refused.
+- [x] **Sign in with Apple turned on in Supabase** (Nov 7), Client IDs
+      `com.ktaehong.gradetracker,host.exp.Exponent`, no secret key. Live auth
+      settings now show Apple, Google and email. Apple requires this option
+      whenever Google sign-in is offered (Guideline 4.8).
+- [ ] App ID with the **Sign In with Apple** capability in the Apple Developer
+      account: [device-testing.md § 1](device-testing.md).
+- [x] Contact email in `docs/privacy-policy.md` and the in-app Privacy page:
+      thkim9989@gmail.com.
+- [ ] Host `docs/privacy-policy.md` (for example GitHub Pages) and put its URL in
+      App Store Connect as both the Privacy Policy URL and the Support URL.
 - [ ] App Store Connect → App Privacy: declare **Name, Email Address, User ID**
       and **Other User Content** (grades), all "linked to the user", used for
       **App Functionality** only; no tracking.

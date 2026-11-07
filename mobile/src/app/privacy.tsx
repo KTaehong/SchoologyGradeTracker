@@ -47,6 +47,10 @@ const SECTIONS: { title: string; body: string }[] = [
       'Settings → Erase all data removes your grades. Signed in, Settings → Delete account ' +
       'permanently deletes your account and everything in it, on every device.',
   },
+  {
+    title: 'Contact',
+    body: 'Questions or requests about your data: thkim9989@gmail.com',
+  },
 ];
 
 export default function PrivacyScreen() {

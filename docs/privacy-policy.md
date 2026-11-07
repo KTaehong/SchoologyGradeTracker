@@ -47,6 +47,4 @@ than the account details listed above.
 
 ## Contact
 
-<!-- TODO before publishing: add a contact email or support page. App Store
-     Connect also needs a Support URL. -->
-Questions: see the support link on the app's App Store page.
+Questions or requests about your data: **thkim9989@gmail.com**
