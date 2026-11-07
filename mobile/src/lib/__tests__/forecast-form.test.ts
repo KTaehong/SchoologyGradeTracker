@@ -24,6 +24,11 @@ describe('validateForecastScore', () => {
     expect(validateForecastScore('9')).toEqual({ ok: true, value: 9 });
     expect(validateForecastScore('nine').ok).toBe(false);
   });
+
+  it('refuses a score too large for the cloud to store', () => {
+    expect(validateForecastScore('999999.99').ok).toBe(true);
+    expect(validateForecastScore('1000000').ok).toBe(false);
+  });
 });
 
 describe('validateNewForecast', () => {
@@ -54,6 +59,9 @@ describe('validateNewForecast', () => {
     [{ forecastScore: '' }, 'points you expect'],
     [{ dueDate: '11/20/2026' }, 'YYYY-MM-DD'],
     [{ dueDate: '2026-02-30' }, 'YYYY-MM-DD'],
+    [{ title: 'x'.repeat(301) }, 'too long'],
+    [{ maxScore: '1000000' }, 'too large'],
+    [{ forecastScore: '1000000' }, 'too large'],
   ])('rejects %p', (change, message) => {
     const result = validateNewForecast({ ...form, ...change });
     expect(result.ok).toBe(false);

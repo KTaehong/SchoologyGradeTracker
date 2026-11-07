@@ -168,8 +168,13 @@ It needs the development build from step 2; in Expo Go the screen says "Not avai
    [`screenshot-parser.test.ts`](../mobile/src/import/__tests__/screenshot-parser.test.ts).
    Remove names of other students or teachers first.
 
-**Done when:** one real screenshot reads with the right scores on each phone, and
-its text is a test case. Saving the rows into the class is the next part of T2.2.
+5. Check the class (tap another to change it) and the grading period, pick a
+   category for any rows without a heading, then tap **Save N assignments**.
+   Scanning the same screenshot again updates those assignments instead of
+   adding copies.
+
+**Done when:** one real screenshot reads with the right scores on each phone, saves
+into the right class and categories, and its text is a test case.
 
 ## 8. Saved-report import (T2.3): one real Schoology Grades page
 

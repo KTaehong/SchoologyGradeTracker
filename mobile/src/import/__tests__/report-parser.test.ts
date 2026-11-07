@@ -134,6 +134,50 @@ describe('parseReportLines', () => {
   });
 });
 
+describe('rows the cloud could not store', () => {
+  it('skips rows with no points possible, which cannot change a grade', () => {
+    const { courses, assignmentCount } = parseReportLines(
+      [
+        'Chemistry: P2',
+        'Quarter 1',
+        'Lab 1 9 / 10',
+        'Lab 2 Due 10/09/26 11:59 pm',
+        'Lab 3 — / 0',
+        'Lab 4 Excused',
+        'Bonus 2 / 0',
+      ],
+      ids(),
+    );
+    const rows = courses[0].periods[0].categories[0].assignments;
+    expect(rows.map((a) => [a.title, a.actualScore, a.maxScore, a.extraCredit])).toEqual([
+      ['Lab 1', 9, 10, false],
+      ['Bonus', 2, 0, true],
+    ]);
+    expect(assignmentCount).toBe(2);
+  });
+
+  it('drops due dates that do not exist', () => {
+    const { courses } = parseReportLines(['Chemistry: P2', 'Quarter 1', 'Lab Due 2/31/26 9 / 10', 'Quiz Due 2/28/26 9 / 10'], ids());
+    expect(courses[0].periods[0].categories[0].assignments.map((a) => a.dueDate)).toEqual([null, '2026-02-28']);
+  });
+
+  it('keeps names and numbers within the cloud limits', () => {
+    const long = 'Word '.repeat(100).trim();
+    const { courses } = parseReportLines(
+      [long, `Quarter 1 (123456%)`, `${long} (50%)`, `${long} 5 / 123456789`],
+      ids(),
+    );
+    const [course] = courses;
+    const [period] = course.periods;
+    const [category] = period.categories;
+    expect(course.name.length).toBeLessThanOrEqual(200);
+    expect(period.weight).toBeLessThanOrEqual(9999.99);
+    expect(category.name.length).toBeLessThanOrEqual(100);
+    expect(category.assignments[0].title.length).toBeLessThanOrEqual(300);
+    expect(category.assignments[0].maxScore).toBe(999999.99);
+  });
+});
+
 describe('looksLikeHtml', () => {
   it('accepts a web page and rejects other text', () => {
     expect(looksLikeHtml(fixture)).toBe(true);

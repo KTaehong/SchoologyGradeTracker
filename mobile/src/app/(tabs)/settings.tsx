@@ -7,7 +7,7 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
-import { comingSoon, confirmAction } from '@/lib/coming-soon';
+import { confirmAction } from '@/lib/coming-soon';
 import { formatRefreshed } from '@/lib/calendar-label';
 import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
@@ -70,7 +70,7 @@ export default function SettingsScreen() {
 
       <Section title="About">
         <Row label="Show welcome screen" onPress={() => router.push('/welcome')} />
-        <Row label="Privacy" onPress={() => comingSoon('The privacy page')} />
+        <Row label="Privacy" onPress={() => router.push('/privacy')} />
         <Row label="Version" right={<ThemedText themeColor="textSecondary">{appVersion()}</ThemedText>} />
       </Section>
     </Screen>
@@ -79,7 +79,7 @@ export default function SettingsScreen() {
 
 function AccountRows() {
   const session = useSession();
-  const { sync, online, syncNow, signOut } = useGradebook();
+  const { sync, online, syncNow, signOut, deleteAccount } = useGradebook();
 
   if (!isApiConfigured()) {
     return <Row label="Account" detail="Not available in this version of the app." />;
@@ -104,6 +104,18 @@ function AccountRows() {
                 : "Your account keeps its grades and forecasts. This phone's copy is removed until you sign in again.",
               'Sign out',
               signOut,
+            )
+          }
+        />
+        <Row
+          label="Delete account"
+          destructive
+          onPress={() =>
+            confirmAction(
+              'Delete your account?',
+              'This permanently deletes your account and every class, grade and forecast saved in it, on every device. It cannot be undone.',
+              'Delete account',
+              deleteAccount,
             )
           }
         />
