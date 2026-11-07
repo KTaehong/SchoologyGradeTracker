@@ -7,7 +7,7 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
-import { confirmAction } from '@/lib/coming-soon';
+import { confirmAction, runOrWarn } from '@/lib/coming-soon';
 import { formatRefreshed } from '@/lib/calendar-label';
 import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
@@ -51,7 +51,11 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Data" footer="Your grades are saved on this phone and work without internet.">
-        <Row label="Add sample grades" detail="Five example courses to explore." onPress={loadSample} />
+        <Row
+          label="Add sample grades"
+          detail="Five example courses to explore."
+          onPress={() => runOrWarn('Could not add sample grades', loadSample)}
+        />
         <Row
           label="Erase all data"
           destructive

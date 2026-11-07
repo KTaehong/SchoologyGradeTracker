@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { formatDayLabel, formatDueTime, groupUpcomingByDay } from '@/data/upcoming';
+import { runOrWarn } from '@/lib/coming-soon';
 import { formatPercent } from '@/lib/format-grade';
 import { greeting, firstName } from '@/lib/greeting';
 import { syncLabel } from '@/lib/sync-label';
@@ -42,7 +43,10 @@ export default function HomeScreen() {
             message="Import your grades from Schoology or type them in. Want to look around first? Load the sample."
           />
           <Button label="Add grades" variant="primary" onPress={() => router.push('/add')} />
-          <Button label="Load sample grades" onPress={loadSample} />
+          <Button
+            label="Load sample grades"
+            onPress={() => runOrWarn('Could not add sample grades', loadSample)}
+          />
         </>
       ) : (
         <>

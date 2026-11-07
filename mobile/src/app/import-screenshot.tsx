@@ -62,16 +62,23 @@ export default function ImportScreenshotScreen() {
 
   async function pick(camera: boolean) {
     const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1 };
-    if (camera) {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setReading({ status: 'error', message: 'Allow camera access in Settings to take a photo.' });
-        return;
+    let picked: ImagePicker.ImagePickerResult;
+    try {
+      if (camera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          setReading({ status: 'error', message: 'Allow camera access in Settings to take a photo.' });
+          return;
+        }
       }
+      // The camera throws on a device without one (such as the iOS Simulator).
+      picked = camera
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+    } catch (e) {
+      setReading({ status: 'error', message: e instanceof Error ? e.message : String(e) });
+      return;
     }
-    const picked = camera
-      ? await ImagePicker.launchCameraAsync(options)
-      : await ImagePicker.launchImageLibraryAsync(options);
     if (picked.canceled || !picked.assets[0]) {
       return;
     }

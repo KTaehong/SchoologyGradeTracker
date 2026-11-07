@@ -8,6 +8,7 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
+import { runOrWarn } from '@/lib/coming-soon';
 import { syncLabel } from '@/lib/sync-label';
 
 /** Grades home (F02): every course with its grade, computed on this phone. */
@@ -34,7 +35,10 @@ export default function GradesScreen() {
             message="Add your grades from a screenshot, a saved Schoology report, or by hand — or try the sample."
           />
           <Button label="Add grades" variant="primary" onPress={openAdd} />
-          <Button label="Load sample grades" onPress={loadSample} />
+          <Button
+            label="Load sample grades"
+            onPress={() => runOrWarn('Could not add sample grades', loadSample)}
+          />
         </>
       ) : (
         state.grades.map((course) => <CourseCard key={course.courseId} course={course} />)

@@ -41,6 +41,13 @@ export type SyncEngineOptions = {
   /** Called after a pull changed rows on this phone, so screens can redraw. */
   onRemoteChange?: () => void;
   onStatus?: (status: SyncStatus) => void;
+  /**
+   * Every sync waits for this first. The app passes the account switch, so no
+   * sync can pull or push before the phone's gradebook belongs to the signed-in
+   * account (otherwise a previous account's unsent rows could be uploaded to it).
+   * If it rejects, syncs report the error and send nothing.
+   */
+  ready?: Promise<unknown>;
   now?: () => Date;
 };
 
@@ -62,6 +69,12 @@ export class SyncEngine {
       return this.running;
     }
     this.running = (async () => {
+      try {
+        await this.options.ready;
+      } catch (error) {
+        this.setStatus({ state: 'error', error: error instanceof Error ? error.message : String(error) });
+        return;
+      }
       do {
         this.again = false;
         await this.runOnce();
