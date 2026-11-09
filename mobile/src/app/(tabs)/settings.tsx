@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { isApiConfigured, useSession } from '@/api';
+import { isApiConfigured, signInMethods, useSession } from '@/api';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Row, Section } from '@/components/ui';
@@ -86,7 +86,7 @@ function AccountRows() {
   const { sync, online, syncNow, signOut, deleteAccount } = useGradebook();
 
   if (!isApiConfigured()) {
-    return <Row label="Account" detail="Not available in this version of the app." />;
+    return <Row label="Account" detail="Accounts are not set up in this build of the app." />;
   }
   if (session.status === 'loading') {
     return <Row label="Account" detail="Checking…" />;
@@ -97,6 +97,15 @@ function AccountRows() {
       <>
         <Row label="Signed in" detail={user.email ?? user.phone ?? 'Account'} />
         <Row label="Sync now" detail={syncLabel(sync, online)} onPress={syncNow} />
+        <Row
+          label={signInMethods(session.session).includes('email') ? 'Change password' : 'Set a password'}
+          detail={
+            signInMethods(session.session).includes('email')
+              ? undefined
+              : 'Also sign in with your email and a password.'
+          }
+          onPress={() => router.push('/password')}
+        />
         <Row
           label="Sign out"
           destructive

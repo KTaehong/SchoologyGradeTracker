@@ -48,6 +48,12 @@ URL and anon key from Supabase (**Project Settings → API**), then restart
 `npx expo start`. Without them the API reports `not_configured` and the rest of
 the app is unaffected. See [`docs/database/README.md`](../docs/database/README.md#6-grade-engine-api).
 
+For EAS builds (TestFlight, App Store, Play), run `npm run eas:env` once: it
+copies the two values to EAS. An EAS build without them stops with an error
+instead of shipping an app with sign-in turned off. Only the publishable/anon
+key may go in the app; a secret key is refused. Releasing:
+[`docs/release-checklist.md`](../docs/release-checklist.md).
+
 ## Checks
 
 ```bash
@@ -64,7 +70,8 @@ npm run lint        # ESLint
   `course/[id].tsx` is a course's detail screen with its forecasts,
   `forecast.tsx` adds, changes, or removes a forecast, and `add.tsx` is the
   *Add grades* sheet. `sign-in.tsx` signs in or creates an account;
-  `auth/callback.tsx` is where Google / Apple / Microsoft sign-in returns.
+  `auth/callback.tsx` is where Google / Apple / Microsoft sign-in and the
+  confirm / reset-password email links return; `password.tsx` sets a new password.
   `_layout.tsx` files wire up navigation, the theme, and the first-run check.
 - `src/components/` — shared UI pieces.
 - `src/lib/coming-soon.ts` — buttons for features that aren't built yet show a

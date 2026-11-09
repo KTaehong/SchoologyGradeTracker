@@ -42,10 +42,23 @@ const SECTIONS: { title: string; body: string }[] = [
       'and we never sell or share your data.',
   },
   {
+    title: 'Security',
+    body:
+      'Your account’s data travels over HTTPS and can only be read by you: the server checks your ' +
+      'sign-in on every request, and signed-out requests are refused. Passwords are handled by ' +
+      'Supabase Auth and are never stored by the app; your sign-in is kept in the phone’s secure storage.',
+  },
+  {
     title: 'Deleting your data',
     body:
       'Settings → Erase all data removes your grades. Signed in, Settings → Delete account ' +
       'permanently deletes your account and everything in it, on every device.',
+  },
+  {
+    title: 'Not affiliated with Schoology',
+    body:
+      'Grade Tracker is an independent app. It is not made by, endorsed by, or affiliated with ' +
+      'Schoology or PowerSchool. Schoology is a trademark of its owner.',
   },
   {
     title: 'Contact',

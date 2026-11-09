@@ -69,7 +69,7 @@ export default function WelcomeScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.hero}>
             <ThemedText type="title" accessibilityRole="header">
-              Schoology Grade Tracker
+              Grade Tracker
             </ThemedText>
             <ThemedText themeColor="textSecondary">
               Know your grades, and what you need on the next test. Your Schoology password is never
@@ -83,6 +83,11 @@ export default function WelcomeScreen() {
               <ThemedText themeColor="textSecondary">{point.body}</ThemedText>
             </ThemedView>
           ))}
+
+          <ThemedText type="small" themeColor="textSecondary">
+            Works with grades from Schoology. Not made by, endorsed by, or affiliated with Schoology
+            or PowerSchool.
+          </ThemedText>
 
           <View style={styles.actions}>
             {cloud ? (

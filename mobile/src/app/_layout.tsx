@@ -32,6 +32,7 @@ function ThemedNavigation() {
         <Stack.Screen name="category-form" options={{ title: 'Category', presentation: 'modal' }} />
         <Stack.Screen name="assignment-form" options={{ title: 'Assignment', presentation: 'modal' }} />
         <Stack.Screen name="sign-in" options={{ title: 'Account', presentation: 'modal' }} />
+        <Stack.Screen name="password" options={{ title: 'Password', presentation: 'modal' }} />
         <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="welcome" options={{ headerShown: false, gestureEnabled: false }} />

@@ -55,7 +55,8 @@ export async function signUpWithEmail({
   const { data, error } = await getSupabase().auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, username } },
+    // The confirmation email opens the app, which signs the student in (auth/callback).
+    options: { data: { full_name: fullName, username }, emailRedirectTo: oauthRedirectUrl() },
   });
   if (error) {
     throw toAuthApiError(error);
@@ -80,6 +81,25 @@ export function oauthRedirectUrl(): string {
  * Configuration → Redirect URLs. See docs/database/README.md.
  */
 export async function signInWithProvider(provider: OAuthProvider): Promise<Session | null> {
+  providerSignInRunning = true;
+  try {
+    return await providerSignIn(provider);
+  } finally {
+    providerSignInRunning = false;
+  }
+}
+
+/**
+ * True while a Google / Apple / Microsoft sign-in is open. The browser hands its
+ * code to signInWithProvider; on Android the same link may also open the
+ * auth/callback screen, which must then leave the code alone (it works once).
+ */
+let providerSignInRunning = false;
+export function isProviderSignInRunning(): boolean {
+  return providerSignInRunning;
+}
+
+async function providerSignIn(provider: OAuthProvider): Promise<Session | null> {
   const supabase = getSupabase();
   const redirectTo = oauthRedirectUrl();
 
@@ -161,6 +181,57 @@ export async function signInWithApple(): Promise<Session | null> {
     await supabase.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
   }
   return data.session;
+}
+
+/**
+ * Emails a link to choose a new password. The link opens the app
+ * (auth/callback), which signs the student in and asks for the new password.
+ * Supabase answers the same way whether or not the email has an account, so
+ * this never reveals who uses the app.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
+    redirectTo: oauthRedirectUrl(),
+  });
+  if (error) {
+    throw toAuthApiError(error);
+  }
+}
+
+/** Sets a new password for the signed-in student (after a reset link, or from Settings). */
+export async function updatePassword(password: string): Promise<void> {
+  const { error } = await getSupabase().auth.updateUser({ password });
+  if (error) {
+    throw toAuthApiError(error);
+  }
+}
+
+export type EmailLinkResult = { session: Session; recovery: boolean };
+
+/**
+ * Finishes sign-in from a link in an email (confirm sign-up, or reset
+ * password): swaps the link's one-time code for a session. `recovery` is true
+ * for a password-reset link, so the app can ask for the new password.
+ * The code only works on the phone that asked for the email.
+ */
+export async function completeEmailLink(code: string): Promise<EmailLinkResult> {
+  const { data, error } = await getSupabase().auth.exchangeCodeForSession(code);
+  if (error) {
+    throw toAuthApiError(error);
+  }
+  // supabase-js returns redirectType at runtime but leaves it out of its types.
+  const redirectType = (data as { redirectType?: string | null }).redirectType;
+  return { session: data.session, recovery: redirectType === 'recovery' };
+}
+
+/** Which ways this account signs in ('email', 'google', 'apple', …). */
+export function signInMethods(session: Session): string[] {
+  const providers = session.user.app_metadata?.providers;
+  if (Array.isArray(providers)) {
+    return providers.filter((p): p is string => typeof p === 'string');
+  }
+  const provider = session.user.app_metadata?.provider;
+  return typeof provider === 'string' ? [provider] : [];
 }
 
 /** Signs out and deletes the saved session from secure storage. */

@@ -55,8 +55,15 @@ eas init
 to `app.json`. Commit that change.
 
 Give the builds the Supabase settings. `.env.local` is not uploaded to EAS, so
-without this the build says "Cloud sync is not set up". Use the same two values
-that are in `mobile/.env.local` (the URL and the publishable key, never the secret key):
+without this an EAS build stops with "has no Supabase settings". One command
+copies the two values from `mobile/.env.local` to the development, preview and
+production environments:
+
+```bash
+npm run eas:env
+```
+
+Or by hand, per environment (the URL and the publishable key, never the secret key):
 
 ```bash
 eas env:create --environment development --name EXPO_PUBLIC_SUPABASE_URL --value "https://mjbujhsixgfaluhuvxnn.supabase.co" --visibility plaintext
@@ -66,7 +73,7 @@ eas env:create --environment development --name EXPO_PUBLIC_SUPABASE_URL --value
 eas env:create --environment development --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<publishable key from .env.local>" --visibility plaintext
 ```
 
-Repeat both for `--environment preview` when you make the release APK later.
+Repeat both for `--environment preview` and `--environment production`.
 
 Register the iPhone (open the link it prints on the iPhone, install the profile
 in Settings → General → VPN & Device Management):

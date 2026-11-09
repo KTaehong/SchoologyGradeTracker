@@ -393,6 +393,13 @@ Under **Authentication → URL Configuration → Redirect URLs**, add:
 - `gradetracker://auth/callback` (installed builds), and
 - `exp://**` (while testing in Expo Go).
 
+The confirmation and password-reset emails use the same link
+(`gradetracker://auth/callback`): the app swaps the link's code for a session,
+and after a reset link asks for the new password. Set **Site URL** to
+`gradetracker://auth/callback` too, and set up custom SMTP before release (the
+built-in sender only emails your Supabase team). See
+[`docs/release-checklist.md`](../release-checklist.md#1-supabase-dashboard-project-mjbujhsixgfaluhuvxnn).
+
 Each "Continue with …" button shows an error until its provider is turned on.
 
 ### Load the sample data

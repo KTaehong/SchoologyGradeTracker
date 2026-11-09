@@ -22,6 +22,12 @@ npx expo start
 
 Then scan the QR code with the **Expo Go** app on your iPhone or Android phone.
 
+## Releasing
+
+Step-by-step list for the App Store and Google Play:
+[`docs/release-checklist.md`](docs/release-checklist.md). Store text:
+[`docs/app-store-listing.md`](docs/app-store-listing.md).
+
 ## Status
 
 MVP in progress — see [`docs/project-plan/`](docs/project-plan/) for the

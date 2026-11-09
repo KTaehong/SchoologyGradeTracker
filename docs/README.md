@@ -12,6 +12,15 @@ Start here to understand what is being built and for whom.
 | [`sync.md`](sync.md) | How grades are stored on the phone and synced to the cloud. |
 | [`device-testing.md`](device-testing.md) | Development builds, Sign in with Apple setup, and the on-phone test checklist. |
 
+## Releasing
+
+| File | What it is |
+|---|---|
+| [`release-checklist.md`](release-checklist.md) | Everything needed to ship to the App Store and Google Play, in order. |
+| [`app-store-listing.md`](app-store-listing.md) | Store text, review notes, privacy answers, screenshots. |
+| [`privacy-policy.md`](privacy-policy.md) | Privacy policy (public URL for the stores). |
+| [`support.md`](support.md) | Support page (public URL for the stores). |
+
 ## [`database/`](database/)
 The cloud database design (Supabase / PostgreSQL): feature list, ER diagram,
 table reference, forecasting model, and hosting setup. The SQL itself is in

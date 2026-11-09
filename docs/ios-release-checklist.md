@@ -1,5 +1,8 @@
 # iOS release checklist
 
+> **Current, complete list:** [release-checklist.md](release-checklist.md). This page is the
+> Nov 7 QA pass, kept for history.
+
 What was checked on Windows (Nov 7, 2026), what was fixed, and what still needs
 a person with the Apple Developer account and the Supabase dashboard.
 

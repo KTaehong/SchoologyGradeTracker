@@ -40,6 +40,15 @@ describe('readApiConfig', () => {
       }),
     ).toEqual({ url: 'https://x.supabase.co', anonKey: 'anon' });
   });
+
+  it('refuses a secret key, which would skip row-level security', () => {
+    expect(
+      readApiConfig({
+        EXPO_PUBLIC_SUPABASE_URL: 'https://x.supabase.co',
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: 'sb_secret_abc',
+      }),
+    ).toBeNull();
+  });
 });
 
 describe('errorMessage', () => {

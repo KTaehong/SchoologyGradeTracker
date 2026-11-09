@@ -24,5 +24,9 @@ const BUILD_ENV: ApiEnv = {
 export function readApiConfig(env: ApiEnv = BUILD_ENV): ApiConfig | null {
   const url = env.EXPO_PUBLIC_SUPABASE_URL?.trim();
   const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  // A secret key would skip row-level security for everyone holding the app.
+  if (anonKey?.startsWith('sb_secret_')) {
+    return null;
+  }
   return url && anonKey ? { url, anonKey } : null;
 }

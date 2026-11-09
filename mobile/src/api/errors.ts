@@ -61,7 +61,7 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.kind) {
       case 'not_configured':
-        return 'Cloud sync is not set up in this version of the app.';
+        return 'Accounts are not set up in this build of the app (its server settings are missing). Your grades still work on this phone.';
       case 'not_signed_in':
         return 'Please sign in again.';
       case 'network':

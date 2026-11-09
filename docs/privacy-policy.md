@@ -1,8 +1,8 @@
-# Privacy Policy — Schoology Grade Tracker
+# Privacy Policy — Grade Tracker
 
-_Last updated: November 7, 2026_
+_Last updated: November 9, 2026_
 
-Schoology Grade Tracker ("the app") helps students see and forecast their own
+Grade Tracker ("the app") helps students see and forecast their own
 grades. This policy says what the app stores and where. The same text is in the
 app under Settings → Privacy (`mobile/src/app/privacy.tsx`); keep the two in step.
 
@@ -34,6 +34,13 @@ stored on our server.
 We never ask for your Schoology password. The app has no ads, no tracking and no
 analytics, and we never sell or share your data.
 
+## Security
+
+Your account's data travels over HTTPS and can only be read by you: the server
+checks your sign-in on every request, and signed-out requests are refused.
+Passwords are handled by Supabase Auth and are never stored by the app; your
+sign-in is kept in the phone's secure storage (iOS Keychain / Android Keystore).
+
 ## Deleting your data
 
 - **Settings → Erase all data** removes your grades (from every device when signed in).
@@ -44,6 +51,11 @@ analytics, and we never sell or share your data.
 
 The app is meant for high-school students. It does not knowingly collect more
 than the account details listed above.
+
+## Not affiliated with Schoology
+
+Grade Tracker is an independent app. It is not made by, endorsed by, or
+affiliated with Schoology or PowerSchool. Schoology is a trademark of its owner.
 
 ## Contact
 

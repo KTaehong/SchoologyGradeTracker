@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import {
   errorMessage,
   isApiConfigured,
+  sendPasswordReset,
   signInWithApple,
   signInWithEmail,
   signInWithProvider,
@@ -16,6 +17,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
+import { looksLikeEmail, MIN_PASSWORD_LENGTH, passwordProblem } from '@/lib/password-rules';
 import { signInProviders } from '@/lib/sign-in-providers';
 import { Spacing } from '@/theme/colors';
 
@@ -38,8 +40,8 @@ export default function SignInScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.content}>
           <EmptyState
-            title="Cloud sync is not set up"
-            message="This version of the app has no server settings. Your grades still work on this phone."
+            title="Accounts are not set up in this build"
+            message="This build was made without its server settings, so signing in is off. Your grades still work on this phone."
           />
         </View>
       </ThemedView>
@@ -66,6 +68,9 @@ export default function SignInScreen() {
       if (!email.trim() || !password) {
         throw new Error('Enter your email and password.');
       }
+      if (!looksLikeEmail(email)) {
+        throw new Error('Enter your full email address, like name@example.com.');
+      }
       if (!signingUp) {
         await signInWithEmail(email.trim(), password);
         router.back();
@@ -74,8 +79,9 @@ export default function SignInScreen() {
       if (!fullName.trim()) {
         throw new Error('Enter your name.');
       }
-      if (password.length < 6) {
-        throw new Error('Use a password with at least 6 characters.');
+      const problem = passwordProblem(password);
+      if (problem) {
+        throw new Error(problem);
       }
       const session = await signUpWithEmail({
         email: email.trim(),
@@ -89,6 +95,17 @@ export default function SignInScreen() {
         setMode('sign-in');
         setNotice('Check your email and tap the link to confirm your account, then sign in here.');
       }
+    });
+
+  const forgotPassword = () =>
+    run(async () => {
+      if (!looksLikeEmail(email)) {
+        throw new Error('Enter your email above, then tap “Forgot password?” again.');
+      }
+      await sendPasswordReset(email.trim());
+      setNotice(
+        `If ${email.trim()} has an account, we sent it a link to choose a new password. Open it on this phone.`,
+      );
     });
 
   const continueWith = (provider: OAuthProvider | 'apple-native') =>
@@ -169,6 +186,11 @@ export default function SignInScreen() {
             textContentType={signingUp ? 'newPassword' : 'password'}
             onSubmitEditing={submit}
           />
+          {signingUp ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              At least {MIN_PASSWORD_LENGTH} characters, with a letter and a number.
+            </ThemedText>
+          ) : null}
 
           {error ? (
             <ThemedText themeColor="danger" accessibilityLiveRegion="polite">
@@ -183,12 +205,16 @@ export default function SignInScreen() {
             disabled={busy}
             onPress={submit}
           />
+          {signingUp ? null : (
+            <Button label="Forgot password?" disabled={busy} onPress={forgotPassword} />
+          )}
           <Button
             label={signingUp ? 'I already have an account' : 'Create an account instead'}
             disabled={busy}
             onPress={() => {
               setMode(signingUp ? 'sign-in' : 'sign-up');
               setError(null);
+              setNotice(null);
             }}
           />
         </ScrollView>
@@ -208,5 +234,4 @@ const styles = StyleSheet.create({
   or: {
     textAlign: 'center',
   },
-
 });
