@@ -40,13 +40,26 @@ development build once per phone (see
 [`docs/device-testing.md`](../docs/device-testing.md#2-register-the-iphone-then-make-development-builds)),
 then run `npx expo start --dev-client` and scan the QR code.
 
-## Cloud API (optional)
+## Build it on a Mac (iOS simulator)
 
-The app works fully offline. To use the cloud API (sign-in, grades snapshot,
-saved forecasts), copy `.env.example` to `.env.local` and fill in the Project
-URL and anon key from Supabase (**Project Settings → API**), then restart
-`npx expo start`. Without them the API reports `not_configured` and the rest of
-the app is unaffected. See [`docs/database/README.md`](../docs/database/README.md#6-grade-engine-api).
+With Xcode and CocoaPods installed:
+
+```bash
+npm ci
+npx expo run:ios
+```
+
+See [`../CLAUDE.md`](../CLAUDE.md) for real-iPhone builds and signing.
+
+## Cloud backend
+
+The app is offline-first and syncs to a hosted Supabase project when a student
+signs in. [`.env`](.env) holds that project's URL and publishable key, so a
+fresh clone is already connected. Both are public values (row-level security
+protects the data); never put the secret key there. To use a different
+Supabase project, put the same two names in `.env.local`, which overrides
+`.env` and is not committed. See
+[`docs/database/README.md`](../docs/database/README.md#6-grade-engine-api).
 
 ## Checks
 

@@ -58,18 +58,9 @@ steps that need your accounts. The earlier iOS pass is in
 
 - [ ] `npm install -g eas-cli`, then in `mobile/`: `eas login` and `eas init`.
       Commit the `extra.eas.projectId` it adds to `app.json`.
-- [ ] Give the **production** builds the Supabase settings (same two values as
-      `mobile/.env.local`; never the secret key):
-
-      ```bash
-      eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_URL --value "https://mjbujhsixgfaluhuvxnn.supabase.co" --visibility plaintext
-      ```
-
-      ```bash
-      eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<publishable key from .env.local>" --visibility plaintext
-      ```
-
-      Without these the build says "Cloud sync is not set up".
+- [x] Supabase settings for builds: `mobile/.env` is in the repository (URL
+      and publishable key only), so local and EAS builds are connected with no
+      extra step.
 - [ ] **Supabase → Authentication → Emails → SMTP Settings:** set up your own
       mail sender (for example Resend's free plan). Supabase's built-in sender
       is for testing: it allows only a few emails an hour and may refuse
@@ -132,6 +123,18 @@ steps that need your accounts. The earlier iOS pass is in
 - [ ] Test on an Android phone: Google sign-in returns to the app, screenshot
       reading (ML Kit), saved-report import, calendar feed, sync with the
       iPhone, delete account. Sign in with Apple is not offered on Android.
+
+## Security pass (Nov 13)
+
+- Supabase's security advisor flagged six trigger functions as callable through
+  the API. They could not actually be run that way, but migration
+  `20261113000800_lock_trigger_functions.sql` closes them anyway. It is applied
+  to the live project (sign-up, score history, sync and delete account were
+  checked there first in a transaction that was rolled back).
+- All 16 tables have row-level security with policies; signed-out calls to the
+  sync and grade functions are refused (checked against the live API).
+- Still open, in the Supabase dashboard: Authentication → Attack Protection →
+  **Leaked password protection** (needs a paid plan).
 
 ## Known and accepted
 
