@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
 import { useCourseGrades, useGradebook } from '@/data/gradebook-store';
+import { DUE_DATE_PLACEHOLDER } from '@/lib/due-date';
 import { validateForecastScore, validateNewForecast } from '@/lib/forecast-form';
 import { useSave } from '@/lib/use-save';
 import { Spacing } from '@/theme/colors';
@@ -180,7 +181,7 @@ function NewForecastForm({ course }: { course: CourseGrades }) {
         label="Due date (optional)"
         value={dueDate}
         onChangeText={setDueDate}
-        placeholder="YYYY-MM-DD"
+        placeholder={DUE_DATE_PLACEHOLDER}
         autoCapitalize="none"
         autoCorrect={false}
       />

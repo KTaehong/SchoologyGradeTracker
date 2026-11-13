@@ -9,6 +9,7 @@ import { Button, Section, SwitchRow, TextField } from '@/components/ui';
 import { useCourse, useGradebook } from '@/data/gradebook-store';
 import type { GradeAssignment, GradeCategory, GradeCourse } from '@/engine/types';
 import { confirmAction } from '@/lib/coming-soon';
+import { DUE_DATE_PLACEHOLDER, dueDateFieldText } from '@/lib/due-date';
 import { numberText, validateAssignment } from '@/lib/gradebook-form';
 import { useSave } from '@/lib/use-save';
 
@@ -57,7 +58,7 @@ function AssignmentForm({
   const [title, setTitle] = useState(assignment?.title ?? '');
   const [actualScore, setActualScore] = useState(numberText(assignment?.actualScore));
   const [maxScore, setMaxScore] = useState(numberText(assignment?.maxScore));
-  const [dueDate, setDueDate] = useState(assignment?.dueDate ?? '');
+  const [dueDate, setDueDate] = useState(dueDateFieldText(assignment?.dueDate));
   const [excused, setExcused] = useState(assignment?.excused ?? false);
   const [extraCredit, setExtraCredit] = useState(assignment?.extraCredit ?? false);
   const { saveAssignment, deleteAssignment } = useGradebook();
@@ -115,7 +116,7 @@ function AssignmentForm({
         label="Due date (optional)"
         value={dueDate}
         onChangeText={setDueDate}
-        placeholder="YYYY-MM-DD"
+        placeholder={DUE_DATE_PLACEHOLDER}
         autoCapitalize="none"
         autoCorrect={false}
       />

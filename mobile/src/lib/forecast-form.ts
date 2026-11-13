@@ -5,6 +5,8 @@
 import type { NewForecast } from '@/api/grades';
 import { MAX_SCORE, NAME_LIMITS } from '@/sync/server-limits';
 
+import { DUE_DATE_ERROR, parseDueDate } from './due-date';
+
 export type FormResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /** A number typed by the student: digits with an optional `.` or `,` decimal. */
@@ -32,7 +34,7 @@ export type NewForecastForm = {
   title: string;
   maxScore: string;
   forecastScore: string;
-  /** Optional, `YYYY-MM-DD`. */
+  /** Optional, as typed: `11/23`, `Nov 23`, `2026-11-23`… (see parseDueDate). */
   dueDate: string;
 };
 
@@ -58,9 +60,9 @@ export function validateNewForecast(form: NewForecastForm): FormResult<NewForeca
   if (!forecast.ok) {
     return forecast;
   }
-  const dueDate = form.dueDate.trim();
-  if (dueDate && !isIsoDate(dueDate)) {
-    return { ok: false, error: 'Write the due date as YYYY-MM-DD, or leave it empty.' };
+  const dueDate = parseDueDate(form.dueDate);
+  if (dueDate === null) {
+    return { ok: false, error: DUE_DATE_ERROR };
   }
   return {
     ok: true,
@@ -72,13 +74,4 @@ export function validateNewForecast(form: NewForecastForm): FormResult<NewForeca
       dueDate: dueDate || null,
     },
   };
-}
-
-/** A real calendar date written `YYYY-MM-DD`. */
-export function isIsoDate(text: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    return false;
-  }
-  const date = new Date(`${text}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(text);
 }

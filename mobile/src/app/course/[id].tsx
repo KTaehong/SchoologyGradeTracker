@@ -12,6 +12,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, Row, Section } from '@/components/ui';
 import { useCourse, useCourseGrades, useGradebook } from '@/data/gradebook-store';
 import type { GradeAssignment, GradeCourse } from '@/engine/types';
+import { formatDueDate } from '@/lib/due-date';
 import { formatGrade, formatNumber, formatPercent, formatPoints } from '@/lib/format-grade';
 import { Radius, Spacing } from '@/theme/colors';
 
@@ -185,7 +186,7 @@ function assignmentScore(a: GradeAssignment): string {
 
 function assignmentDetail(a: GradeAssignment): string | undefined {
   const parts = [
-    a.dueDate ? `due ${a.dueDate}` : null,
+    a.dueDate ? `due ${formatDueDate(a.dueDate)}` : null,
     a.extraCredit ? 'extra credit' : null,
     a.actualScore === null && a.forecastScore !== null
       ? `forecast ${formatPoints(a.forecastScore, a.maxScore)}`
@@ -225,7 +226,7 @@ function ForecastSection({ course }: { course: CourseGrades }) {
         <Row
           key={item.assignmentId}
           label={item.title}
-          detail={[where.get(item.categoryId), item.dueDate ? `due ${item.dueDate}` : null]
+          detail={[where.get(item.categoryId), item.dueDate ? `due ${formatDueDate(item.dueDate)}` : null]
             .filter(Boolean)
             .join(' · ')}
           onPress={() => open(item)}

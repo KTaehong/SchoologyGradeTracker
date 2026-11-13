@@ -136,6 +136,27 @@ steps that need your accounts. The earlier iOS pass is in
 - Still open, in the Supabase dashboard: Authentication → Attack Protection →
   **Leaked password protection** (needs a paid plan).
 
+## Final QA pass (Nov 13)
+
+- **Live backend, end to end** (`npm run test:live`, new): signs in to the
+  hosted project over the real network with a throwaway account, syncs two
+  phones both ways, checks the Realtime "another device changed something"
+  message arrives, compares every course grade between the phone's engine and
+  the server's, checks signed-out and wrong-password calls are refused, then
+  deletes the account and checks it can no longer sign in. All passed; no test
+  accounts are left on the project.
+- **Every screen walked in a browser at phone size**, light and dark: Welcome,
+  Home, Grades, class detail, Upcoming, Settings, Add grades, class /
+  assignment forms, saved-report import, calendar link, sign in / create
+  account, Privacy. Grades were checked by hand against the sample data.
+- **Fixed:**
+  1. Due dates were typed and shown as `2026-11-23`. They can now be typed the
+     way students write them (`11/23`, `11/23/26`, `Nov 23`) and are shown as
+     "Nov 23" (`mobile/src/lib/due-date.ts`).
+  2. The steps on "Import a saved report" touched the edge of their box.
+  3. Welcome said "Sign in with email" even for a new student; it now says
+     "Continue with email". Create account shows the minimum password length.
+
 ## Known and accepted
 
 - `npm audit` still lists advisories in build tools (not in the app's own

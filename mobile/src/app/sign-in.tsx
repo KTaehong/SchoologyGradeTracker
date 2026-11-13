@@ -174,7 +174,7 @@ export default function SignInScreen() {
             textContentType="emailAddress"
           />
           <TextField
-            label="Password"
+            label={signingUp ? `Password (at least ${MIN_PASSWORD_LENGTH} characters)` : 'Password'}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -224,5 +224,4 @@ const styles = StyleSheet.create({
   or: {
     textAlign: 'center',
   },
-
 });

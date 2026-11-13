@@ -53,6 +53,10 @@ npm run lint
 npm test
 ```
 
+`npm run test:live` (optional) checks the hosted backend itself over the
+network; it needs a throwaway confirmed account in `LIVE_TEST_EMAIL` /
+`LIVE_TEST_PASSWORD` and deletes that account at the end.
+
 `npm test` runs the app tests and then the sync code against every migration in
 `supabase/migrations/` in an in-memory Postgres (PGlite), so no database setup
 is needed. `npx expo-doctor` checks the Expo project.
