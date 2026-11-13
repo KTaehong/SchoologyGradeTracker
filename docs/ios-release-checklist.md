@@ -1,5 +1,7 @@
 # iOS release checklist
 
+> The current checklist for both stores is [store-release-checklist.md](store-release-checklist.md).
+
 What was checked on Windows (Nov 7, 2026), what was fixed, and what still needs
 a person with the Apple Developer account and the Supabase dashboard.
 

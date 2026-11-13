@@ -9,6 +9,7 @@ import { Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { confirmAction, runOrWarn } from '@/lib/coming-soon';
 import { formatRefreshed } from '@/lib/calendar-label';
+import { hasPassword } from '@/lib/password-form';
 import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
 import { type ThemePreference, useTheme, useThemePreference } from '@/theme/theme-preference';
@@ -97,6 +98,9 @@ function AccountRows() {
       <>
         <Row label="Signed in" detail={user.email ?? user.phone ?? 'Account'} />
         <Row label="Sync now" detail={syncLabel(sync, online)} onPress={syncNow} />
+        {hasPassword(user) ? (
+          <Row label="Change password" onPress={() => router.push('/new-password')} />
+        ) : null}
         <Row
           label="Sign out"
           destructive

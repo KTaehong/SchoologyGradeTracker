@@ -45,7 +45,8 @@ const SECTIONS: { title: string; body: string }[] = [
     title: 'Deleting your data',
     body:
       'Settings → Erase all data removes your grades. Signed in, Settings → Delete account ' +
-      'permanently deletes your account and everything in it, on every device.',
+      'permanently deletes your account and everything in it, on every device. If you cannot ' +
+      'open the app, email us from your account’s address and we will delete it for you.',
   },
   {
     title: 'Contact',

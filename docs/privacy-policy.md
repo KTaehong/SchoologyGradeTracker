@@ -1,6 +1,6 @@
 # Privacy Policy — Schoology Grade Tracker
 
-_Last updated: November 7, 2026_
+_Last updated: November 12, 2026_
 
 Schoology Grade Tracker ("the app") helps students see and forecast their own
 grades. This policy says what the app stores and where. The same text is in the
@@ -39,6 +39,9 @@ analytics, and we never sell or share your data.
 - **Settings → Erase all data** removes your grades (from every device when signed in).
 - **Settings → Delete account** permanently deletes your account and everything
   in it, on every device.
+- **Without the app:** email **thkim9989@gmail.com** from the address your
+  account uses and ask for it to be deleted. We delete the account and
+  everything in it within 30 days.
 
 ## Children
 

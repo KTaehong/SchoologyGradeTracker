@@ -11,16 +11,19 @@ import { createGradesApi } from './grades';
 import { createRpcCaller } from './rpc';
 
 export {
+  finishAuthLink,
   getSession,
   oauthRedirectUrl,
   onSessionChange,
+  requestPasswordReset,
   signInWithApple,
   signInWithEmail,
   signInWithProvider,
   signOut,
   signUpWithEmail,
+  updatePassword,
 } from './auth';
-export type { OAuthProvider, Session, SignUp } from './auth';
+export type { AuthLinkResult, OAuthProvider, Session, SignUp } from './auth';
 export { getSupabase, isApiConfigured } from './client';
 export { ApiError, errorMessage } from './errors';
 export type { ApiErrorKind } from './errors';

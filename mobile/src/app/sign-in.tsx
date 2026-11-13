@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import {
   errorMessage,
   isApiConfigured,
+  requestPasswordReset,
   signInWithApple,
   signInWithEmail,
   signInWithProvider,
@@ -16,6 +17,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
+import { MIN_PASSWORD_LENGTH } from '@/lib/password-form';
 import { signInProviders } from '@/lib/sign-in-providers';
 import { Spacing } from '@/theme/colors';
 
@@ -74,8 +76,8 @@ export default function SignInScreen() {
       if (!fullName.trim()) {
         throw new Error('Enter your name.');
       }
-      if (password.length < 6) {
-        throw new Error('Use a password with at least 6 characters.');
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        throw new Error(`Use a password with at least ${MIN_PASSWORD_LENGTH} characters.`);
       }
       const session = await signUpWithEmail({
         email: email.trim(),
@@ -87,8 +89,19 @@ export default function SignInScreen() {
         router.back();
       } else {
         setMode('sign-in');
-        setNotice('Check your email and tap the link to confirm your account, then sign in here.');
+        setNotice('Check your email and tap the link on this phone to confirm your account.');
       }
+    });
+
+  const forgotPassword = () =>
+    run(async () => {
+      if (!email.trim()) {
+        throw new Error('Enter your email above first, then tap "Forgot password?" again.');
+      }
+      await requestPasswordReset(email.trim());
+      setNotice(
+        'If an account uses that email, a link to choose a new password is on its way. Open it on this phone.',
+      );
     });
 
   const continueWith = (provider: OAuthProvider | 'apple-native') =>
@@ -183,6 +196,9 @@ export default function SignInScreen() {
             disabled={busy}
             onPress={submit}
           />
+          {signingUp ? null : (
+            <Button label="Forgot password?" disabled={busy} onPress={forgotPassword} />
+          )}
           <Button
             label={signingUp ? 'I already have an account' : 'Create an account instead'}
             disabled={busy}
