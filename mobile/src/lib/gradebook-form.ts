@@ -6,7 +6,8 @@
 import type { AssignmentFields, CategoryFields, CourseFields, NewPeriod } from '@/db/gradebook-repo';
 import type { GradingMode } from '@/data/types';
 
-import { isIsoDate, parseScore, type FormResult } from './forecast-form';
+import { DUE_DATE_ERROR, parseDueDate } from './due-date';
+import { parseScore, type FormResult } from './forecast-form';
 
 /** How the school year is split. Names follow Schoology, so semesters are inferred (Q1/Q2 → 1). */
 export const PERIOD_PRESETS: { label: string; periods: NewPeriod[] }[] = [
@@ -81,7 +82,7 @@ export type AssignmentForm = {
   /** Empty = not graded yet. */
   actualScore: string;
   maxScore: string;
-  /** Optional, `YYYY-MM-DD`. */
+  /** Optional, as typed: `11/23`, `Nov 23`, `2026-11-23`… (see parseDueDate). */
   dueDate: string;
   excused: boolean;
   extraCredit: boolean;
@@ -109,9 +110,9 @@ export function validateAssignment(form: AssignmentForm): FormResult<AssignmentF
   if (maxScore > 999999 || (actualScore ?? 0) > 999999) {
     return { ok: false, error: 'That score is too large.' };
   }
-  const dueDate = form.dueDate.trim();
-  if (dueDate && !isIsoDate(dueDate)) {
-    return { ok: false, error: 'Write the due date as YYYY-MM-DD, or leave it empty.' };
+  const dueDate = parseDueDate(form.dueDate);
+  if (dueDate === null) {
+    return { ok: false, error: DUE_DATE_ERROR };
   }
   return {
     ok: true,

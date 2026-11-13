@@ -102,7 +102,7 @@ export default function ImportReportScreen() {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Section title="How to save your grades">
-          <ThemedText themeColor="textSecondary">
+          <ThemedText themeColor="textSecondary" style={styles.steps}>
             1. In a web browser, open Schoology and go to Grades.{'\n'}
             2. Save the page: File → Save Page As… → &quot;Web Page, HTML only&quot; (on a phone, use
             Share → Save to Files).{'\n'}
@@ -184,5 +184,8 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.four,
     gap: Spacing.three,
+  },
+  steps: {
+    padding: Spacing.three,
   },
 });

@@ -61,7 +61,8 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run test:app && npm run test:cloud",
     "test:app": "jest --testPathIgnorePatterns real-server",
-    "test:cloud": "node --experimental-vm-modules node_modules/jest/bin/jest.js real-server"
+    "test:cloud": "node --experimental-vm-modules node_modules/jest/bin/jest.js real-server",
+    "test:live": "jest live-backend --forceExit"
   },
   "private": true,
   "jest": {

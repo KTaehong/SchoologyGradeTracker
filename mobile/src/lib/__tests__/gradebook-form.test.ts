@@ -79,7 +79,7 @@ describe('validateAssignment', () => {
     [{ title: '' }],
     [{ maxScore: '' }],
     [{ actualScore: 'A' }],
-    [{ dueDate: '10/20/2026' }],
+    [{ dueDate: 'next week' }],
     [{ dueDate: '2026-02-30' }],
   ])('rejects %p', (change) => {
     expect(validateAssignment({ ...form, ...change }).ok).toBe(false);

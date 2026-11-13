@@ -97,7 +97,7 @@ export default function WelcomeScreen() {
                     onPress={() => continueWith(provider)}
                   />
                 ))}
-                <Button label="Sign in with email" disabled={busy} onPress={() => router.push('/sign-in')} />
+                <Button label="Continue with email" disabled={busy} onPress={() => router.push('/sign-in')} />
               </>
             ) : null}
             {error ? (

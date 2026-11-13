@@ -11,6 +11,7 @@ import { Button, Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import { canReadScreenshots, readScreenshotText } from '@/import/read-screenshot';
 import { matchCategory, matchCourse, parseScreenshot, type ParsedRow } from '@/import/screenshot-parser';
+import { formatDueDate } from '@/lib/due-date';
 import { planScreenshotRows } from '@/lib/screenshot-plan';
 import { useSave } from '@/lib/use-save';
 import { Spacing } from '@/theme/colors';
@@ -220,7 +221,7 @@ export default function ImportScreenshotScreen() {
                     <Row
                       key={`${i}-${row.title}`}
                       label={row.title}
-                      detail={`${scoreLabel(row)} · ${where}${row.dueDate ? ` · due ${row.dueDate}` : ''}`}
+                      detail={`${scoreLabel(row)} · ${where}${row.dueDate ? ` · due ${formatDueDate(row.dueDate)}` : ''}`}
                     />
                   );
                 })}
