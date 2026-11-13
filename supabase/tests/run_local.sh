@@ -27,6 +27,16 @@ echo "seed     seed.sql (twice, to check it is safe to repeat)"
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f seed.sql
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f seed.sql
 
+echo "demo     demo_accounts.sql (twice; refused until a password is set)"
+if psql -q -v ON_ERROR_STOP=1 -d "$db" -f demo_accounts.sql 2>/dev/null; then
+  echo "demo_accounts.sql ran with the placeholder password."
+  exit 1
+fi
+for pw in local-test-password-1 local-test-password-2; do
+  sed "s/'CHANGE-ME'/'$pw'/" demo_accounts.sql | psql -q -v ON_ERROR_STOP=1 -d "$db"
+done
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f tests/demo_accounts_test.sql
+
 echo "demo     ../docs/database/demo.sql"
 psql -q -v ON_ERROR_STOP=1 -o /dev/null -d "$db" -f ../docs/database/demo.sql
 
