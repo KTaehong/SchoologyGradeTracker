@@ -67,13 +67,13 @@ import { computeCourseGrades } from '@/engine/grade-engine';
 import type { GradeCourse } from '@/engine/types';
 import { FEED_UID_PREFIX, fetchCalendar, normalizeFeedUrl, toFeedItems } from '@/import/calendar-feed';
 import { forgetCalendarLink, readCalendarLink, saveCalendarLink } from '@/import/calendar-link';
-import { attachAccount, attachedAccount, detachAccount } from '@/sync/account';
+import { attachAccount, detachAccount } from '@/sync/account';
 import { onReconnect, useOnline } from '@/sync/connectivity';
 import { createSupabaseTransport, watchRemoteChanges } from '@/sync/supabase-sync';
 import { SyncEngine, type SyncStatus } from '@/sync/sync-engine';
 
 import { createSampleGradebook } from './sample-gradebook';
-import { readLegacyGradebook, removeLegacyGradebook } from './storage';
+import { removeLegacyGradebook } from './storage';
 import type { UpcomingItem } from './types';
 
 type GradebookState =
@@ -147,16 +147,13 @@ const CALENDAR_STALE_MS = 60 * 60 * 1000;
 
 const newId = () => Crypto.randomUUID();
 
-/** First run on this version: start with the sample, unless the student had erased everything. */
+/**
+ * First run on this version: clear out what older versions left behind. The
+ * gradebook starts empty; signing in fills it from the account.
+ */
 async function prepareDatabase(db: SqlDb): Promise<void> {
   if ((await getMeta(db, LEGACY_IMPORTED_KEY)) !== null) {
     return;
-  }
-  const legacy = await readLegacyGradebook().catch(() => 'missing' as const);
-  if (legacy !== 'empty' && (await attachedAccount(db)) === null) {
-    const sample = createSampleGradebook(newId);
-    await insertCourses(db, sample.courses, 'sample');
-    await insertUpcoming(db, sample.upcoming);
   }
   await setMeta(db, LEGACY_IMPORTED_KEY, '1');
   await removeLegacyGradebook().catch(() => undefined);
@@ -166,6 +163,8 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<SqlDb | null>(null);
   const [state, setState] = useState<GradebookState>({ status: 'loading' });
   const [sync, setSync] = useState<SyncStatus | null>(null);
+  /** The account whose gradebook is on screen; `null` until sign-in has loaded it. */
+  const [shownAccount, setShownAccount] = useState<string | null>(null);
   const engineRef = useRef<SyncEngine | null>(null);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const session = useSession();
@@ -241,6 +240,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         if (stopped) return;
         await reload(db);
         await engine.refreshStatus();
+        if (!stopped) setShownAccount(userId);
       } catch {
         // The sync below reports a failed account switch as a sync error.
       }
@@ -254,6 +254,8 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       stopped = true;
+      setShownAccount(null);
+      setSync(null);
       stopRealtime();
       stopNet();
       appState.remove();
@@ -319,6 +321,19 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
   const changedRef = useRef<typeof changed | null>(null);
   changedRef.current = changed;
 
+  // Signed in, show a spinner (not someone else's grades, and not "add your
+  // classes") until this account's gradebook is here: the phone's copy has been
+  // matched to the account, and an empty copy has heard from the cloud once.
+  const shownState = useMemo<GradebookState>(() => {
+    if (userId === null || state.status !== 'ready') return state;
+    if (shownAccount !== userId) return { status: 'loading' };
+    const empty = state.courses.length === 0 && state.upcoming.length === 0;
+    const waiting =
+      sync === null ||
+      (sync.lastSyncedAt === null && (sync.state === 'idle' || sync.state === 'syncing'));
+    return empty && waiting ? { status: 'loading' } : state;
+  }, [state, userId, shownAccount, sync]);
+
   const value = useMemo<GradebookContextValue>(() => {
     const edit = async (action: (database: SqlDb) => Promise<void>) => {
       if (!db) throw new Error('The gradebook is still opening. Try again in a moment.');
@@ -339,7 +354,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       }
     };
     return {
-      state,
+      state: shownState,
       calendar,
       importReport: (courses, replaceIds) => edit((d) => importCourses(d, courses, replaceIds)),
       importScreenshot: async (rows) => {
@@ -436,7 +451,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         }
       },
     };
-  }, [state, calendar, sync, online, db, userId, changed, reload, loadFeed]);
+  }, [shownState, calendar, sync, online, db, userId, changed, reload, loadFeed]);
 
   return <GradebookContext.Provider value={value}>{children}</GradebookContext.Provider>;
 }

@@ -4,33 +4,37 @@
 -- How to use (Supabase dashboard → SQL Editor):
 --   1. Paste this file.
 --   2. Change the password on the line marked "SET THE PASSWORD HERE".
---   3. Run. Then sign in to the app with "Continue with email".
+--   3. Run. Then sign in to the app with a username below and that password.
 --
---   Email                        Student         Courses
---   maya.demo@example.com        Maya Torres     AP Biology, AP Statistics,
---                                                Honors English 11, AP World History
---   jordan.demo@example.com      Jordan Brooks   Algebra 2, Chemistry, US History,
---                                                Spanish 2, Physical Education
---   sam.demo@example.com         Sam Nguyen      AP Computer Science A,
---                                                AP Macroeconomics, Honors Physics,
---                                                Studio Art
+--   Username         Student         Courses
+--   maya_torres      Maya Torres     AP Biology, AP Statistics,
+--                                    Honors English 11, AP World History
+--   jordan_brooks    Jordan Brooks   Algebra 2, Chemistry, US History,
+--                                    Spanish 2, Physical Education
+--   sam_nguyen       Sam Nguyen      AP Computer Science A, AP Macroeconomics,
+--                                    Honors Physics, Studio Art
+--
+-- Supabase signs people in by email, so each account's email is
+-- <username>@demo.example.com (a domain that can never receive mail). The app
+-- adds that ending when a username is typed: see mobile/src/lib/sign-in-form.ts.
 --
 -- All three use the same password. Running the file again keeps the gradebooks
--- and only sets the password again, so it is also how you change the password.
+-- and only sets the password (and the email above) again, so it is also how you
+-- change the password.
 --
 -- Do not commit the real password: change it in the SQL Editor, not in the
 -- repository. These accounts are separate from the three students in seed.sql
 -- (ana_park, ben_ortiz, chris_lee), who have no password.
 --
 -- To remove the demo accounts and all their data:
---   delete from auth.users where email like '%.demo@example.com';
+--   delete from auth.users where email like '%@demo.example.com';
 -- =============================================================================
 
 do $$
 declare
   v_password constant text := 'CHANGE-ME';   -- <== SET THE PASSWORD HERE (8+ characters)
 
-  -- Each student: id, name, username, email, courses, upcoming items.
+  -- Each student: id, name, username, courses, upcoming items.
   -- Courses use the format of load_sample_gradebook(): each assignment is
   -- [title, actual score, max score, days ago, options]. Options can set
   -- excused (ex), extra credit (ec), or a forecast (f). Q2 gets the same
@@ -38,7 +42,7 @@ declare
   students constant jsonb := $json$
   [
     {"id": "44444444-4444-4444-8444-444444444444",
-     "name": "Maya Torres", "username": "maya_torres", "email": "maya.demo@example.com",
+     "name": "Maya Torres", "username": "maya_torres",
      "courses": [
        {"name": "AP Biology", "teacher": "Dr. Whitfield", "mode": "weighted",
         "categories": [
@@ -91,7 +95,7 @@ declare
      ]},
 
     {"id": "55555555-5555-4555-8555-555555555555",
-     "name": "Jordan Brooks", "username": "jordan_brooks", "email": "jordan.demo@example.com",
+     "name": "Jordan Brooks", "username": "jordan_brooks",
      "courses": [
        {"name": "Algebra 2", "teacher": "Mrs. Donnelly", "mode": "weighted",
         "categories": [
@@ -147,7 +151,7 @@ declare
      ]},
 
     {"id": "66666666-6666-4666-8666-666666666666",
-     "name": "Sam Nguyen", "username": "sam_nguyen", "email": "sam.demo@example.com",
+     "name": "Sam Nguyen", "username": "sam_nguyen",
      "courses": [
        {"name": "AP Computer Science A", "teacher": "Ms. Petrova", "mode": "weighted",
         "categories": [
@@ -203,6 +207,7 @@ declare
   v_cat       jsonb;
   v_row       jsonb;
   v_id        uuid;
+  v_email     text;
   v_import_id uuid;
   v_course_id uuid;
   v_q1_id     uuid;
@@ -220,13 +225,19 @@ begin
 
   for v_student in select value from jsonb_array_elements(students) loop
     v_id := (v_student ->> 'id')::uuid;
+    v_email := (v_student ->> 'username') || '@demo.example.com';
 
-    -- Already loaded: keep the gradebook, set the password again.
+    -- Already loaded: keep the gradebook, set the password and email again.
     if exists (select 1 from auth.users where id = v_id) then
       update auth.users
          set encrypted_password = extensions.crypt(v_password, extensions.gen_salt('bf')),
+             email = v_email,
              updated_at = now()
        where id = v_id;
+      update auth.identities
+         set identity_data = identity_data || jsonb_build_object('email', v_email),
+             updated_at = now()
+       where user_id = v_id and provider = 'email';
       continue;
     end if;
     v_new := v_new + 1;
@@ -240,7 +251,7 @@ begin
        confirmation_token, recovery_token, email_change, email_change_token_new)
     values
       ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
-       v_student ->> 'email', extensions.crypt(v_password, extensions.gen_salt('bf')), now(),
+       v_email, extensions.crypt(v_password, extensions.gen_salt('bf')), now(),
        now(), now(), '{"provider": "email", "providers": ["email"]}',
        jsonb_build_object('full_name', v_student ->> 'name', 'username', v_student ->> 'username'),
        '', '', '', '');
@@ -249,7 +260,7 @@ begin
       (id, user_id, provider, provider_id, identity_data, last_sign_in_at, created_at, updated_at)
     values
       (gen_random_uuid(), v_id, 'email', v_id::text,
-       jsonb_build_object('sub', v_id::text, 'email', v_student ->> 'email',
+       jsonb_build_object('sub', v_id::text, 'email', v_email,
                           'email_verified', true, 'phone_verified', false),
        now(), now(), now());
 
@@ -355,7 +366,7 @@ begin
   if v_new = 0 then
     raise notice 'Demo accounts already exist. Their password was set again.';
   else
-    raise notice 'Created % demo account(s): maya.demo@, jordan.demo@ and sam.demo@example.com.', v_new;
+    raise notice 'Created % demo account(s): maya_torres, jordan_brooks and sam_nguyen.', v_new;
   end if;
 end;
 $$;

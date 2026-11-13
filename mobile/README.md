@@ -71,8 +71,8 @@ npm run lint        # ESLint
 
 ## Layout
 
-- `src/app/` — screens. `welcome.tsx` is shown on first run (sign in, or use
-  the app without an account). `(tabs)/` holds the four tabs: `index.tsx`
+- `src/app/` — screens. `sign-in.tsx` is the first screen at every launch
+  (the app needs an account, and does not stay signed in). `(tabs)/` holds the four tabs: `index.tsx`
   (Home, the landing page), `grades.tsx`, `upcoming.tsx`, `settings.tsx`.
   `course/[id].tsx` is a course's detail screen with its forecasts,
   `forecast.tsx` adds, changes, or removes a forecast, and `add.tsx` is the

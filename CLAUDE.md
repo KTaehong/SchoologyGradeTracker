@@ -23,10 +23,13 @@ optimized build without the dev menu: `npx expo run:ios --configuration Release`
 Do not use Expo Go for a demo: screenshot import and Sign in with Apple need
 this app's own build.
 
-**Expected result:** the Welcome screen opens. "Use without an account" goes
-straight to sample grades. "Sign in" → "Create an account" makes a real account
-on the hosted backend (a confirmation email is sent); after signing in,
-Settings shows the account and "Synced".
+**Expected result:** the sign-in screen opens, at every launch: the app cannot
+be used without an account, and it does not stay signed in after it is closed.
+Sign in with a demo username (`maya_torres`, `jordan_brooks` or `sam_nguyen`,
+made by `supabase/demo_accounts.sql`) or an email; "Create an account" makes a
+real account on the hosted backend (a confirmation email is sent). After
+signing in, Home shows that account's classes and Settings shows the account
+and "Synced".
 
 If the sign-in screen says "Cloud sync is not set up", `mobile/.env` is missing
 or Metro has a stale cache: check the file, then `npx expo start --clear`.
