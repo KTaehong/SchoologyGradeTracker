@@ -3,6 +3,7 @@
     "name": "Grade Tracker",
     "slug": "schoology-grade-tracker",
     "version": "1.0.0",
+    "description": "See, forecast and plan your Schoology grades. Works offline; an optional account syncs your grades between devices.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "gradetracker",
@@ -17,7 +18,8 @@
           "NSAllowsArbitraryLoads": false,
           "NSAllowsLocalNetworking": true
         }
-      }
+      },
+      "supportsTablet": false
     },
     "android": {
       "package": "com.ktaehong.gradetracker",
@@ -27,7 +29,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "single",
