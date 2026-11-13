@@ -54,19 +54,8 @@ eas init
 `eas init` links the app to your Expo account and adds `extra.eas.projectId`
 to `app.json`. Commit that change.
 
-Give the builds the Supabase settings. `.env.local` is not uploaded to EAS, so
-without this the build says "Cloud sync is not set up". Use the same two values
-that are in `mobile/.env.local` (the URL and the publishable key, never the secret key):
-
-```bash
-eas env:create --environment development --name EXPO_PUBLIC_SUPABASE_URL --value "https://mjbujhsixgfaluhuvxnn.supabase.co" --visibility plaintext
-```
-
-```bash
-eas env:create --environment development --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<publishable key from .env.local>" --visibility plaintext
-```
-
-Repeat both for `--environment preview` when you make the release APK later.
+The builds get the Supabase settings from `mobile/.env`, which is in the
+repository (URL and publishable key only), so there is nothing to set on EAS.
 
 Register the iPhone (open the link it prints on the iPhone, install the profile
 in Settings → General → VPN & Device Management):

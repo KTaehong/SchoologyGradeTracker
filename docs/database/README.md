@@ -442,8 +442,8 @@ student's rows. The app, signed in as one student, sees only that student's rows
 
 ### Connecting the app (T3.4)
 The app needs the **Project URL** and the **anon public key** from
-**Project Settings → API**. Put them in `mobile/.env.local` (copy
-[`mobile/.env.example`](../../mobile/.env.example)). The anon key is safe in the
+**Project Settings → API**. They are in [`mobile/.env`](../../mobile/.env),
+which is committed so a fresh clone is connected. The anon key is safe in the
 app because RLS protects the data. Never put the **service_role** key or the
 database password in the app or in this repository.
 

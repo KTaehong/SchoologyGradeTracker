@@ -1,5 +1,5 @@
 /**
- * Where the cloud API lives. Set these in `mobile/.env.local` (see mobile/README.md):
+ * Where the cloud API lives. Set in `mobile/.env` (see mobile/README.md):
  *
  *   EXPO_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
  *   EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
