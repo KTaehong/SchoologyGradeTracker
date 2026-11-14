@@ -11,17 +11,13 @@ import { Spacing } from '@/theme/colors';
  */
 const SECTIONS: { title: string; body: string }[] = [
   {
-    title: 'Without an account',
+    title: 'Your account',
     body:
-      'Your classes, grades and forecasts are saved only on this phone. Nothing is sent to us. ' +
-      'Deleting the app deletes them.',
-  },
-  {
-    title: 'With an account (optional)',
-    body:
-      'If you sign in, we keep your name, email address, username and gradebook (classes, ' +
-      'categories, assignments, scores, forecasts and upcoming work) on our server (Supabase), so ' +
-      'they sync to your other devices. Each account can only read its own data.',
+      'The app needs an account. When you sign in, we keep your name, email address, username ' +
+      'and gradebook (classes, categories, assignments, scores, forecasts and upcoming work) on ' +
+      'our server (Supabase), so they sync to your other devices. Each account can only read its ' +
+      'own data. A copy is kept on this phone so the app keeps working without internet; signing ' +
+      'out removes that copy.',
   },
   {
     title: 'Screenshots and saved reports',

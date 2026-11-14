@@ -6,17 +6,14 @@ Schoology Grade Tracker ("the app") helps students see and forecast their own
 grades. This policy says what the app stores and where. The same text is in the
 app under Settings → Privacy (`mobile/src/app/privacy.tsx`); keep the two in step.
 
-## Without an account
+## Your account
 
-Your classes, grades and forecasts are saved only on your phone. Nothing is sent
-to us. Deleting the app deletes them.
-
-## With an account (optional)
-
-If you sign in (with email, Google, or Apple), we store your name, email address,
-username and gradebook (classes, categories, assignments, scores, forecasts and
-upcoming work) on our server, which runs on Supabase. This lets your grades sync to
-your other devices. Each account can only read its own data.
+The app needs an account. When you sign in (with email, Google, or Apple), we
+store your name, email address, username and gradebook (classes, categories,
+assignments, scores, forecasts and upcoming work) on our server, which runs on
+Supabase. This lets your grades sync to your other devices. Each account can
+only read its own data. A copy is kept on your phone so the app keeps working
+without internet; signing out removes that copy.
 
 ## Screenshots and saved reports
 

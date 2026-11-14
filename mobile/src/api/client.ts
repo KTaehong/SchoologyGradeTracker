@@ -6,6 +6,7 @@ import { AppState, Platform } from 'react-native';
 
 import { readApiConfig } from './config';
 import { ApiError } from './errors';
+import { createWebSessionStorage, startSignedOut } from './launch-session-storage';
 import { createSecureSessionStorage } from './secure-session-storage';
 
 let client: SupabaseClient | null = null;
@@ -18,9 +19,9 @@ export function isApiConfigured(): boolean {
 /**
  * The one Supabase client for the whole app.
  *
- * After sign-in, supabase-js keeps the session in secure storage, refreshes the
- * access token before it expires, and sends it as `Authorization: Bearer …` on
- * every request. So API code never handles tokens: it only calls
+ * After sign-in, supabase-js keeps the session in secure storage until the app
+ * is closed, refreshes the access token before it expires, and sends it as
+ * `Authorization: Bearer …` on every request. So API code never handles tokens: it only calls
  * `getSupabase().rpc(...)` or `.from(...)`.
  */
 export function getSupabase(): SupabaseClient {
@@ -37,8 +38,11 @@ export function getSupabase(): SupabaseClient {
 
   const created = createClient(config.url, config.anonKey, {
     auth: {
-      // The web build has no Keychain; supabase-js falls back to localStorage there.
-      storage: Platform.OS === 'web' ? undefined : createSecureSessionStorage(SecureStore),
+      // Every launch starts signed out (see startSignedOut). The web build has
+      // no Keychain, so it uses localStorage.
+      storage: startSignedOut(
+        Platform.OS === 'web' ? createWebSessionStorage() : createSecureSessionStorage(SecureStore),
+      ),
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,

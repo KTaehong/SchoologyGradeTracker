@@ -411,6 +411,27 @@ password, so nobody can sign in as them.
 The SQL editor runs as an admin and **bypasses RLS**, so it shows every
 student's rows. The app, signed in as one student, sees only that student's rows.
 
+### Demo accounts that can sign in
+[`supabase/demo_accounts.sql`](../../supabase/demo_accounts.sql) adds three
+more students who **can** sign in to the app, each with different courses:
+
+| Username | Student | Courses |
+|---|---|---|
+| `maya_torres` | Maya Torres | AP Biology, AP Statistics, Honors English 11, AP World History (all A / A-) |
+| `jordan_brooks` | Jordan Brooks | Algebra 2 (C-), Chemistry, US History, Spanish 2, Physical Education |
+| `sam_nguyen` | Sam Nguyen | AP Computer Science A, AP Macroeconomics, Honors Physics, Studio Art |
+
+In **SQL Editor**, paste the file, change the password on the line marked
+`SET THE PASSWORD HERE`, and **Run**. All three accounts use that password.
+Change it only in the SQL Editor; do not commit it. Running the file again
+keeps the gradebooks and sets the password again.
+
+In the app, type the username and that password on the sign-in screen.
+Supabase signs people in by email, so each demo account's email is
+`<username>@demo.example.com`; the app adds that ending when a username (no
+`@`) is typed. Usernames work for these demo accounts only: an account made in
+the app signs in with its email.
+
 ### Demo in class
 [`demo.sql`](demo.sql) has the queries, in three parts:
 1. **Inspect the schema:** tables with row counts, columns, constraints,
