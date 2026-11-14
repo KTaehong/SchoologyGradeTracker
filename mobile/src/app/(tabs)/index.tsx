@@ -17,7 +17,7 @@ import { syncLabel } from '@/lib/sync-label';
 import { Radius, Spacing } from '@/theme/colors';
 
 /**
- * Home: the landing page after sign-in (or after "use without an account").
+ * Home: the landing page after sign-in.
  * A glance at every class, what's due next, and what still needs a forecast.
  */
 export default function HomeScreen() {

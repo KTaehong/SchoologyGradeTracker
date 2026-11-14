@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { FormError, FormSheet } from '@/components/form-sheet';
+import { KeepVisible } from '@/components/keyboard-scroll';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Row, Section, TextField } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
@@ -80,18 +81,24 @@ export default function CalendarFeedScreen() {
         autoCorrect={false}
         keyboardType="url"
         autoFocus
+        returnKeyType="go"
+        onSubmitEditing={() => {
+          if (!busy && link.trim()) connect();
+        }}
       />
       <ThemedText type="small" themeColor="textSecondary">
         The link works like a password: anyone with it can see your calendar. It stays on this phone, in
         secure storage, and is only sent to Schoology.
       </ThemedText>
-      <FormError error={error} />
-      <Button
-        label={busy ? 'Connecting…' : 'Connect'}
-        variant="primary"
-        disabled={busy || link.trim().length === 0}
-        onPress={connect}
-      />
+      <KeepVisible>
+        <FormError error={error} />
+        <Button
+          label={busy ? 'Connecting…' : 'Connect'}
+          variant="primary"
+          disabled={busy || link.trim().length === 0}
+          onPress={connect}
+        />
+      </KeepVisible>
     </FormSheet>
   );
 }

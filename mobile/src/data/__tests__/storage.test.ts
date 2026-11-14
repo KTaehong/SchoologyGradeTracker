@@ -2,9 +2,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
-  hasSeenWelcome,
   loadThemePreference,
-  markWelcomeSeen,
   readLegacyGradebook,
   removeLegacyGradebook,
   saveThemePreference,
@@ -27,14 +25,6 @@ describe('theme preference storage', () => {
   it('ignores unknown saved values', async () => {
     await AsyncStorage.setItem('settings.themePreference', 'purple');
     await expect(loadThemePreference()).resolves.toBeNull();
-  });
-});
-
-describe('welcome screen flag', () => {
-  it('is unseen until marked', async () => {
-    await expect(hasSeenWelcome()).resolves.toBe(false);
-    await markWelcomeSeen();
-    await expect(hasSeenWelcome()).resolves.toBe(true);
   });
 });
 

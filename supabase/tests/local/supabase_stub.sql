@@ -18,8 +18,38 @@ create table auth.users (
   phone              text,
   raw_user_meta_data jsonb,
   raw_app_meta_data  jsonb,
-  created_at         timestamptz default now()
+  created_at         timestamptz default now(),
+  -- Used by demo_accounts.sql (accounts that can sign in).
+  encrypted_password     text,
+  confirmation_token     text,
+  recovery_token         text,
+  email_change           text,
+  email_change_token_new text
 );
+
+create table auth.identities (
+  id              uuid primary key,
+  user_id         uuid not null references auth.users (id) on delete cascade,
+  provider        text not null,
+  provider_id     text not null,
+  identity_data   jsonb not null,
+  last_sign_in_at timestamptz,
+  created_at      timestamptz,
+  updated_at      timestamptz,
+  unique (provider_id, provider)
+);
+
+-- Supabase keeps pgcrypto (crypt, gen_salt) in the `extensions` schema. Only
+-- demo_accounts.sql needs it, so carry on where it is not installed (the
+-- in-memory database used by `npm test`).
+create schema extensions;
+do $$
+begin
+  create extension pgcrypto with schema extensions;
+exception when others then
+  raise notice 'pgcrypto is not available; demo_accounts.sql cannot run here.';
+end;
+$$;
 
 create function auth.uid() returns uuid language sql stable as $$
   select coalesce(

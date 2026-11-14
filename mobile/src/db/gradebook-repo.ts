@@ -365,7 +365,7 @@ export async function wipeLocalData(db: SqlDb): Promise<void> {
     for (const table of SYNC_TABLES) {
       await db.run(`delete from ${table}`);
     }
-    await db.run(`delete from meta where key in ('account_id', 'sync_cursor', 'last_synced_at')`);
+    await db.run(`delete from meta where key in ('account_id', 'sync_cursor', 'last_synced_at', 'calendar_refreshed_at')`);
   });
 }
 

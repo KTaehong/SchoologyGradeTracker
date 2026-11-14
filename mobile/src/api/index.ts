@@ -16,6 +16,7 @@ export {
   oauthRedirectUrl,
   onSessionChange,
   requestPasswordReset,
+  resendConfirmation,
   signInWithApple,
   signInWithEmail,
   signInWithProvider,

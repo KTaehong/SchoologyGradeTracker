@@ -6,6 +6,7 @@ import { AppState, Platform } from 'react-native';
 
 import { readApiConfig } from './config';
 import { ApiError } from './errors';
+import { createWebSessionStorage, signOutOnResume, startSignedOut } from './launch-session-storage';
 import { createSecureSessionStorage } from './secure-session-storage';
 
 let client: SupabaseClient | null = null;
@@ -18,9 +19,9 @@ export function isApiConfigured(): boolean {
 /**
  * The one Supabase client for the whole app.
  *
- * After sign-in, supabase-js keeps the session in secure storage, refreshes the
- * access token before it expires, and sends it as `Authorization: Bearer …` on
- * every request. So API code never handles tokens: it only calls
+ * After sign-in, supabase-js keeps the session in secure storage until the app
+ * is closed, refreshes the access token before it expires, and sends it as
+ * `Authorization: Bearer …` on every request. So API code never handles tokens: it only calls
  * `getSupabase().rpc(...)` or `.from(...)`.
  */
 export function getSupabase(): SupabaseClient {
@@ -37,8 +38,11 @@ export function getSupabase(): SupabaseClient {
 
   const created = createClient(config.url, config.anonKey, {
     auth: {
-      // The web build has no Keychain; supabase-js falls back to localStorage there.
-      storage: Platform.OS === 'web' ? undefined : createSecureSessionStorage(SecureStore),
+      // Every launch starts signed out (see startSignedOut). The web build has
+      // no Keychain, so it uses localStorage.
+      storage: startSignedOut(
+        Platform.OS === 'web' ? createWebSessionStorage() : createSecureSessionStorage(SecureStore),
+      ),
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
@@ -48,12 +52,22 @@ export function getSupabase(): SupabaseClient {
     },
   });
 
-  // Refresh tokens only while the app is on screen, as Supabase recommends for mobile.
+  // Refresh tokens only while the app is on screen, as Supabase recommends for
+  // mobile. Coming back after a long time away counts as a new launch: the
+  // session is dropped from this phone (the account and its grades are kept).
   if (Platform.OS !== 'web') {
+    let backgroundSince: number | null = null;
     AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        const away = backgroundSince;
+        backgroundSince = null;
+        if (signOutOnResume(away, Date.now())) {
+          created.auth.signOut({ scope: 'local' }).catch(() => undefined);
+          return;
+        }
         created.auth.startAutoRefresh();
       } else {
+        if (state === 'background' && backgroundSince === null) backgroundSince = Date.now();
         created.auth.stopAutoRefresh();
       }
     });

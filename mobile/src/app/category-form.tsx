@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
 import { FormError, FormSheet } from '@/components/form-sheet';
+import { KeepVisible } from '@/components/keyboard-scroll';
 import { Loading } from '@/components/loading';
 import { ThemedText } from '@/components/themed-text';
 import { Button, TextField } from '@/components/ui';
@@ -125,13 +126,15 @@ function CategoryForm({
       <ThemedText type="small" themeColor="textSecondary">
         How many of the lowest scores in this category don’t count, if your teacher drops any.
       </ThemedText>
-      <FormError error={error} />
-      <Button
-        label={busy ? 'Saving…' : category ? 'Save changes' : 'Add category'}
-        variant="primary"
-        disabled={busy}
-        onPress={submit}
-      />
+      <KeepVisible>
+        <FormError error={error} />
+        <Button
+          label={busy ? 'Saving…' : category ? 'Save changes' : 'Add category'}
+          variant="primary"
+          disabled={busy}
+          onPress={submit}
+        />
+      </KeepVisible>
       {category ? <Button label="Delete category" disabled={busy} onPress={remove} /> : null}
     </FormSheet>
   );

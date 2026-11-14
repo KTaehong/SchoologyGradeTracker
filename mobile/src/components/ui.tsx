@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, type Ref } from 'react';
 import { Pressable, StyleSheet, Switch, TextInput, View, type TextInputProps } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -113,7 +113,12 @@ export function SwitchRow({
 }
 
 /** A labeled text box. */
-export function TextField({ label, style, ...inputProps }: { label: string } & TextInputProps) {
+export function TextField({
+  label,
+  style,
+  ref,
+  ...inputProps
+}: { label: string; ref?: Ref<TextInput> } & TextInputProps) {
   const colors = useTheme();
   return (
     <View style={styles.field}>
@@ -121,6 +126,7 @@ export function TextField({ label, style, ...inputProps }: { label: string } & T
         {label}
       </ThemedText>
       <TextInput
+        ref={ref}
         accessibilityLabel={label}
         placeholderTextColor={colors.textSecondary}
         style={[

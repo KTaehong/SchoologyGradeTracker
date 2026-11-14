@@ -5,7 +5,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * (src/db/).
  */
 const THEME_PREFERENCE_KEY = 'settings.themePreference';
-const WELCOME_SEEN_KEY = 'settings.welcomeSeen';
 /** Where versions before SQLite saved the gradebook, as one JSON blob. */
 export const LEGACY_GRADEBOOK_KEY = 'gradebook.v1';
 
@@ -18,14 +17,6 @@ export async function loadThemePreference(): Promise<StoredTheme | null> {
 
 export async function saveThemePreference(preference: StoredTheme): Promise<void> {
   await AsyncStorage.setItem(THEME_PREFERENCE_KEY, preference);
-}
-
-export async function hasSeenWelcome(): Promise<boolean> {
-  return (await AsyncStorage.getItem(WELCOME_SEEN_KEY)) === '1';
-}
-
-export async function markWelcomeSeen(): Promise<void> {
-  await AsyncStorage.setItem(WELCOME_SEEN_KEY, '1');
 }
 
 /**

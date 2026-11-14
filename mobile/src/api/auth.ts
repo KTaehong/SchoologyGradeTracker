@@ -19,6 +19,9 @@ function toAuthApiError(error: AuthError): ApiError {
   if (error.name === 'AuthRetryableFetchError' || error.status === 0) {
     return new ApiError('network', error.message, error.code ?? null);
   }
+  if (error.status === 429) {
+    return new ApiError('server', error.message, error.code ?? 'over_request_rate_limit');
+  }
   if (error.status === 400 || error.status === 422) {
     return new ApiError('invalid_input', error.message, error.code ?? null);
   }
@@ -64,7 +67,28 @@ export async function signUpWithEmail({
   if (error) {
     throw toAuthApiError(error);
   }
+  // An email that already has an account gets a stand-in user with no logins
+  // (so the reply does not reveal who has an account) and no email is sent.
+  if (!data.session && data.user && data.user.identities?.length === 0) {
+    throw new ApiError(
+      'invalid_input',
+      'An account with this email already exists.',
+      'user_already_exists',
+    );
+  }
   return data.session;
+}
+
+/** Sends the "confirm your account" email again. */
+export async function resendConfirmation(email: string): Promise<void> {
+  const { error } = await getSupabase().auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: oauthRedirectUrl() },
+  });
+  if (error) {
+    throw toAuthApiError(error);
+  }
 }
 
 let browserSignInActive = false;

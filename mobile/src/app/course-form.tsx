@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
 import { FieldLabel, FormError, FormSheet } from '@/components/form-sheet';
+import { KeepVisible } from '@/components/keyboard-scroll';
 import { Loading } from '@/components/loading';
 import { PeriodPicker } from '@/components/period-picker';
 import { ThemedText } from '@/components/themed-text';
@@ -134,13 +135,15 @@ function CourseForm({ course }: { course?: GradeCourse }) {
           </ThemedText>
         </>
       )}
-      <FormError error={error} />
-      <Button
-        label={busy ? 'Saving…' : course ? 'Save changes' : 'Add class'}
-        variant="primary"
-        disabled={busy}
-        onPress={submit}
-      />
+      <KeepVisible>
+        <FormError error={error} />
+        <Button
+          label={busy ? 'Saving…' : course ? 'Save changes' : 'Add class'}
+          variant="primary"
+          disabled={busy}
+          onPress={submit}
+        />
+      </KeepVisible>
       {course ? <Button label="Delete class" disabled={busy} onPress={remove} /> : null}
     </FormSheet>
   );

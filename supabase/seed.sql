@@ -8,8 +8,8 @@
 --   Ben Ortiz  — the sample gradebook, with some forecasts replaced by actual grades.
 --   Chris Lee  — one class built by hand (manual entry, F06).
 --
--- The demo students exist only for SQL queries. They have no password, so
--- nobody can sign in as them.
+-- The demo students have no password here, so nobody can sign in as them
+-- until demo_accounts.sql is run, which gives them one.
 -- =============================================================================
 
 do $$

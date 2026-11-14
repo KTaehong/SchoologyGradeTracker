@@ -1,21 +1,19 @@
 import { type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
+import { KeyboardScroll } from '@/components/keyboard-scroll';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/theme/colors';
 
-/** The scrolling page of a form sheet, kept clear of the keyboard. */
+/**
+ * The scrolling page of a form sheet, kept clear of the keyboard. Wrap the
+ * form's main button in `KeepVisible` to keep it above the keyboard.
+ */
 export function FormSheet({ children }: { children: ReactNode }) {
   return (
     <ThemedView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <KeyboardScroll contentContainerStyle={styles.content}>{children}</KeyboardScroll>
     </ThemedView>
   );
 }
