@@ -406,7 +406,7 @@ It adds three demo students:
 | `chris_lee` | One class built by hand, points grading. Chemistry: 80.77 (B-). |
 
 Running the seed a second time does nothing. The demo students have no
-password, so nobody can sign in as them.
+password until `demo_accounts.sql` (below) is run, which gives them one.
 
 The SQL editor runs as an admin and **bypasses RLS**, so it shows every
 student's rows. The app, signed in as one student, sees only that student's rows.
@@ -425,6 +425,10 @@ In **SQL Editor**, paste the file, change the password on the line marked
 `SET THE PASSWORD HERE`, and **Run**. All three accounts use that password.
 Change it only in the SQL Editor; do not commit it. Running the file again
 keeps the gradebooks and sets the password again.
+
+The same run gives that password to the three seed students above, who sign
+in with their email (`ana.park@example.com`, `ben.ortiz@example.com`,
+`chris.lee@example.com`).
 
 In the app, type the username and that password on the sign-in screen.
 Supabase signs people in by email, so each demo account's email is

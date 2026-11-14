@@ -6,7 +6,7 @@ import { AppState, Platform } from 'react-native';
 
 import { readApiConfig } from './config';
 import { ApiError } from './errors';
-import { createWebSessionStorage, startSignedOut } from './launch-session-storage';
+import { createWebSessionStorage, signOutOnResume, startSignedOut } from './launch-session-storage';
 import { createSecureSessionStorage } from './secure-session-storage';
 
 let client: SupabaseClient | null = null;
@@ -52,12 +52,22 @@ export function getSupabase(): SupabaseClient {
     },
   });
 
-  // Refresh tokens only while the app is on screen, as Supabase recommends for mobile.
+  // Refresh tokens only while the app is on screen, as Supabase recommends for
+  // mobile. Coming back after a long time away counts as a new launch: the
+  // session is dropped from this phone (the account and its grades are kept).
   if (Platform.OS !== 'web') {
+    let backgroundSince: number | null = null;
     AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        const away = backgroundSince;
+        backgroundSince = null;
+        if (signOutOnResume(away, Date.now())) {
+          created.auth.signOut({ scope: 'local' }).catch(() => undefined);
+          return;
+        }
         created.auth.startAutoRefresh();
       } else {
+        if (state === 'background' && backgroundSince === null) backgroundSince = Date.now();
         created.auth.stopAutoRefresh();
       }
     });

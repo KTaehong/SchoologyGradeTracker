@@ -16,6 +16,14 @@ export function toSignInEmail(typed: string): string {
   return `${name.toLowerCase()}@${DEMO_EMAIL_DOMAIN}`;
 }
 
+/**
+ * Whether `typed` looks like an email address someone can receive mail at:
+ * a name, an @, and a domain with a dot and an ending of two or more letters.
+ */
+export function isValidEmail(typed: string): boolean {
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[A-Za-z]{2,}$/.test(typed.trim());
+}
+
 /** Whether what was typed is a username (no email address to send a reset link to). */
 export function isUsername(typed: string): boolean {
   const name = typed.trim();
@@ -34,15 +42,33 @@ export function accountLabel(user: AccountUser): string {
   return email || user.phone || 'Account';
 }
 
-/** A sign-in failure in plain words. */
+const AUTH_MESSAGES: Record<string, string> = {
+  invalid_credentials: 'Wrong username or password.',
+  email_not_confirmed:
+    'This account is not confirmed yet. Tap the link in the email we sent, or send the email again below.',
+  user_already_exists: 'An account with this email already exists. Sign in instead.',
+  email_exists: 'An account with this email already exists. Sign in instead.',
+  email_address_invalid:
+    'That email address cannot be used. Use an address you can open on this phone, such as your school or Gmail address.',
+  validation_failed: 'Enter a real email address, such as name@gmail.com.',
+  email_address_not_authorized:
+    'The app cannot send email to that address yet. Ask the app owner to set up email sending, or sign in with Google.',
+  over_email_send_rate_limit:
+    'Too many emails were sent in the last hour. Wait a while and try again, or sign in with Google.',
+  over_request_rate_limit: 'Too many tries. Wait a minute and try again.',
+  weak_password: 'Choose a stronger password: longer, and not a common word.',
+  signup_disabled: 'New accounts cannot be made right now.',
+};
+
+/** A sign-in or sign-up failure in plain words. */
 export function signInErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.code === 'invalid_credentials') {
-      return 'Wrong username or password.';
-    }
-    if (error.code === 'email_not_confirmed') {
-      return 'Confirm your email first: tap the link we sent you, on this phone.';
-    }
+  if (error instanceof ApiError && error.code && AUTH_MESSAGES[error.code]) {
+    return AUTH_MESSAGES[error.code];
   }
   return errorMessage(error);
+}
+
+/** Whether the failure means the email was never confirmed (so "send again" helps). */
+export function needsConfirmation(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'email_not_confirmed';
 }

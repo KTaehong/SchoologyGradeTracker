@@ -37,6 +37,15 @@ select pg_temp.expect('profiles were created with the chosen usernames',
   (select string_agg(username, ',' order by username) from public.profiles
     where email like '%@demo.example.com'), 'jordan_brooks,maya_torres,sam_nguyen');
 
+select pg_temp.expect('the seed.sql students got the password and an email login',
+  (select count(*) from auth.users u
+    where u.email in ('ana.park@example.com', 'ben.ortiz@example.com', 'chris.lee@example.com')
+      and u.encrypted_password = extensions.crypt('local-test-password-2', u.encrypted_password)
+      and u.confirmation_token = '' and u.recovery_token = ''
+      and u.email_change = '' and u.email_change_token_new = ''
+      and (select count(*) from auth.identities i
+            where i.user_id = u.id and i.provider = 'email') = 1), 3::bigint);
+
 -- 2. Different courses for each student, and the second run added nothing.
 select pg_temp.expect('courses per student (jordan, maya, sam)',
   (select string_agg(n::text, ',' order by username)

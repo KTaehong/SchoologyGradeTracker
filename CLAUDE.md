@@ -24,9 +24,11 @@ Do not use Expo Go for a demo: screenshot import and Sign in with Apple need
 this app's own build.
 
 **Expected result:** the sign-in screen opens, at every launch: the app cannot
-be used without an account, and it does not stay signed in after it is closed.
+be used without an account, and it does not stay signed in after it is closed
+(or after five minutes in the background).
 Sign in with a demo username (`maya_torres`, `jordan_brooks` or `sam_nguyen`,
-made by `supabase/demo_accounts.sql`) or an email; "Create an account" makes a
+made by `supabase/demo_accounts.sql`) or an email (the same script lets
+`ben.ortiz@example.com` and the other seed students sign in); "Create an account" makes a
 real account on the hosted backend (a confirmation email is sent). After
 signing in, Home shows that account's classes and Settings shows the account
 and "Synced".

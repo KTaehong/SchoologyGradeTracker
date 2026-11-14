@@ -66,7 +66,12 @@ import type { SqlDb } from '@/db/sql';
 import { computeCourseGrades } from '@/engine/grade-engine';
 import type { GradeCourse } from '@/engine/types';
 import { FEED_UID_PREFIX, fetchCalendar, normalizeFeedUrl, toFeedItems } from '@/import/calendar-feed';
-import { forgetCalendarLink, readCalendarLink, saveCalendarLink } from '@/import/calendar-link';
+import {
+  forgetCalendarLink,
+  forgetLegacyCalendarLink,
+  readCalendarLink,
+  saveCalendarLink,
+} from '@/import/calendar-link';
 import { attachAccount, detachAccount } from '@/sync/account';
 import { onReconnect, useOnline } from '@/sync/connectivity';
 import { createSupabaseTransport, watchRemoteChanges } from '@/sync/supabase-sync';
@@ -140,7 +145,7 @@ const GradebookContext = createContext<GradebookContextValue | null>(null);
 
 /** Wait this long after a change before syncing, so a burst of edits goes in one push. */
 const PUSH_DELAY_MS = 1500;
-const LEGACY_IMPORTED_KEY = 'legacy_imported';
+const LEGACY_IMPORTED_KEY = 'legacy_imported_v2';
 const CALENDAR_REFRESHED_KEY = 'calendar_refreshed_at';
 /** Re-read the calendar on launch when it is older than this. */
 const CALENDAR_STALE_MS = 60 * 60 * 1000;
@@ -157,6 +162,9 @@ async function prepareDatabase(db: SqlDb): Promise<void> {
   }
   await setMeta(db, LEGACY_IMPORTED_KEY, '1');
   await removeLegacyGradebook().catch(() => undefined);
+  // Older versions kept one calendar link for the whole phone; whose was it?
+  await setMeta(db, CALENDAR_REFRESHED_KEY, null);
+  await forgetLegacyCalendarLink().catch(() => undefined);
 }
 
 export function GradebookProvider({ children }: { children: ReactNode }) {
@@ -277,17 +285,21 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     return { result, refreshedAt };
   }, []);
 
-  // Is a calendar connected? If so and it is stale, read it again.
+  // The signed-in account's calendar: is one connected? If it is stale, read
+  // it again. Waits until this account's gradebook is on the phone, so feed
+  // items never land in someone else's.
+  const calendarAccount = shownAccount !== null && shownAccount === userId ? userId : null;
   useEffect(() => {
-    if (!db) return;
+    setCalendar({ connected: null, refreshing: false, refreshedAt: null, error: null });
+    if (!db || !calendarAccount) return;
     let cancelled = false;
     (async () => {
       const [link, refreshedAt] = await Promise.all([
-        readCalendarLink().catch(() => null),
+        readCalendarLink(calendarAccount).catch(() => null),
         getMeta(db, CALENDAR_REFRESHED_KEY),
       ]);
       if (cancelled) return;
-      setCalendar((c) => ({ ...c, connected: link !== null, refreshedAt }));
+      setCalendar((c) => ({ ...c, connected: link !== null, refreshedAt: link ? refreshedAt : null }));
       const stale = !refreshedAt || Date.now() - new Date(refreshedAt).getTime() > CALENDAR_STALE_MS;
       if (!link || !stale) return;
       setCalendar((c) => ({ ...c, refreshing: true }));
@@ -304,7 +316,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [db, loadFeed]);
+  }, [db, calendarAccount, loadFeed]);
 
   /** After a change made here: redraw now, push a moment later. */
   const changed = useCallback(
@@ -365,18 +377,19 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         return result;
       },
       connectCalendar: async (link) => {
+        if (!calendarAccount) throw new Error('Your grades are still loading. Try again in a moment.');
         const url = normalizeFeedUrl(link);
         const result = await refreshWith(url);
-        await saveCalendarLink(url);
+        await saveCalendarLink(calendarAccount, url);
         return result;
       },
       refreshCalendar: async () => {
-        const url = await readCalendarLink();
+        const url = calendarAccount ? await readCalendarLink(calendarAccount) : null;
         if (!url) throw new Error('Connect your Schoology calendar in Settings first.');
         return refreshWith(url);
       },
       disconnectCalendar: async () => {
-        await forgetCalendarLink();
+        if (calendarAccount) await forgetCalendarLink(calendarAccount);
         await edit(async (d) => {
           await removeFeedItems(d, FEED_UID_PREFIX);
           await setMeta(d, CALENDAR_REFRESHED_KEY, null);
@@ -442,6 +455,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       deleteAccount: async () => {
         await createRpcCaller(getSupabase)('delete_my_account');
         if (pushTimer.current) clearTimeout(pushTimer.current);
+        if (userId) await forgetCalendarLink(userId).catch(() => undefined);
         // The account is gone, so the server may refuse the sign-out; the
         // phone forgets the session either way.
         await apiSignOut().catch(() => undefined);
@@ -451,7 +465,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         }
       },
     };
-  }, [shownState, calendar, sync, online, db, userId, changed, reload, loadFeed]);
+  }, [shownState, calendar, calendarAccount, sync, online, db, userId, changed, reload, loadFeed]);
 
   return <GradebookContext.Provider value={value}>{children}</GradebookContext.Provider>;
 }

@@ -12,6 +12,19 @@
  */
 import type { SessionStorage } from './secure-session-storage';
 
+/**
+ * iPhones and Android phones often keep an app in memory, so tapping its icon
+ * resumes it instead of launching it again. Back after this long away counts
+ * as a new launch, and the student signs in again. Shorter trips (copying the
+ * calendar link from Safari, opening a confirmation email) keep the session.
+ */
+export const RESUME_SIGN_OUT_MS = 5 * 60 * 1000;
+
+/** Whether coming back to the app now should sign the student out. */
+export function signOutOnResume(backgroundSince: number | null, now: number): boolean {
+  return backgroundSince !== null && now - backgroundSince >= RESUME_SIGN_OUT_MS;
+}
+
 const KEPT_SUFFIX = '-code-verifier';
 
 export function startSignedOut(storage: SessionStorage): SessionStorage {

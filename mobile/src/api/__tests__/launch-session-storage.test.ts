@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { startSignedOut } from '../launch-session-storage';
+import { RESUME_SIGN_OUT_MS, signOutOnResume, startSignedOut } from '../launch-session-storage';
 import type { SessionStorage } from '../secure-session-storage';
 
 function fakeStorage(initial: Record<string, string>): SessionStorage & { data: Map<string, string> } {
@@ -47,5 +47,19 @@ describe('startSignedOut', () => {
   it('keeps the secret an emailed link needs', async () => {
     const storage = startSignedOut(fakeStorage({ [VERIFIER]: 'secret' }));
     await expect(storage.getItem(VERIFIER)).resolves.toBe('secret');
+  });
+});
+
+describe('signOutOnResume', () => {
+  it('keeps the session after a short trip out of the app', () => {
+    expect(signOutOnResume(1_000, 1_000 + 60_000)).toBe(false);
+  });
+
+  it('signs out after a long time in the background', () => {
+    expect(signOutOnResume(1_000, 1_000 + RESUME_SIGN_OUT_MS)).toBe(true);
+  });
+
+  it('does nothing when the app never went to the background', () => {
+    expect(signOutOnResume(null, Date.now())).toBe(false);
   });
 });

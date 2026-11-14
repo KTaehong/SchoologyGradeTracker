@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
 import { FormError, FormSheet } from '@/components/form-sheet';
+import { KeepVisible } from '@/components/keyboard-scroll';
 import { Loading } from '@/components/loading';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Section, SwitchRow, TextField } from '@/components/ui';
@@ -139,13 +140,15 @@ function AssignmentForm({
           Your forecast for this is {assignment.forecastScore}. A real score replaces it in your grade.
         </ThemedText>
       ) : null}
-      <FormError error={error} />
-      <Button
-        label={busy ? 'Saving…' : assignment ? 'Save changes' : 'Add assignment'}
-        variant="primary"
-        disabled={busy}
-        onPress={submit}
-      />
+      <KeepVisible>
+        <FormError error={error} />
+        <Button
+          label={busy ? 'Saving…' : assignment ? 'Save changes' : 'Add assignment'}
+          variant="primary"
+          disabled={busy}
+          onPress={submit}
+        />
+      </KeepVisible>
       {assignment ? <Button label="Delete assignment" disabled={busy} onPress={remove} /> : null}
     </FormSheet>
   );

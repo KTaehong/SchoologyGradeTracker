@@ -22,9 +22,12 @@
 -- and only sets the password (and the email above) again, so it is also how you
 -- change the password.
 --
+-- The three students from seed.sql get the same password, so they can sign in
+-- too, with their email: ana.park@example.com, ben.ortiz@example.com and
+-- chris.lee@example.com. Run seed.sql first if you want them.
+--
 -- Do not commit the real password: change it in the SQL Editor, not in the
--- repository. These accounts are separate from the three students in seed.sql
--- (ana_park, ben_ortiz, chris_lee), who have no password.
+-- repository.
 --
 -- To remove the demo accounts and all their data:
 --   delete from auth.users where email like '%@demo.example.com';
@@ -362,6 +365,32 @@ begin
 
     update public.imports set rows_imported = v_rows where id = v_import_id;
   end loop;
+
+  -- 3. The seed.sql students: set the password, fill the token columns Supabase
+  --    Auth cannot read as null, and add the email login they were missing.
+  update auth.users
+     set encrypted_password = extensions.crypt(v_password, extensions.gen_salt('bf')),
+         confirmation_token = coalesce(confirmation_token, ''),
+         recovery_token = coalesce(recovery_token, ''),
+         email_change = coalesce(email_change, ''),
+         email_change_token_new = coalesce(email_change_token_new, ''),
+         updated_at = now()
+   where id in ('11111111-1111-4111-8111-111111111111',
+                '22222222-2222-4222-8222-222222222222',
+                '33333333-3333-4333-8333-333333333333');
+
+  insert into auth.identities
+    (id, user_id, provider, provider_id, identity_data, last_sign_in_at, created_at, updated_at)
+  select gen_random_uuid(), u.id, 'email', u.id::text,
+         jsonb_build_object('sub', u.id::text, 'email', u.email,
+                            'email_verified', true, 'phone_verified', false),
+         now(), now(), now()
+    from auth.users u
+   where u.id in ('11111111-1111-4111-8111-111111111111',
+                  '22222222-2222-4222-8222-222222222222',
+                  '33333333-3333-4333-8333-333333333333')
+     and not exists (select 1 from auth.identities i
+                      where i.user_id = u.id and i.provider = 'email');
 
   if v_new = 0 then
     raise notice 'Demo accounts already exist. Their password was set again.';

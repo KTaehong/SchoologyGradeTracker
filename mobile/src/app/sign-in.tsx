@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   isApiConfigured,
   requestPasswordReset,
+  resendConfirmation,
   signInWithApple,
   signInWithEmail,
   signInWithProvider,
@@ -15,12 +16,19 @@ import {
 } from '@/api';
 import { AppleSignInButton } from '@/components/apple-sign-in-button';
 import { EmptyState } from '@/components/empty-state';
+import { KeepVisible, KeyboardScroll } from '@/components/keyboard-scroll';
 import { Loading } from '@/components/loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-form';
-import { isUsername, signInErrorMessage, toSignInEmail } from '@/lib/sign-in-form';
+import {
+  isUsername,
+  isValidEmail,
+  needsConfirmation,
+  signInErrorMessage,
+  toSignInEmail,
+} from '@/lib/sign-in-form';
 import { signInProviders } from '@/lib/sign-in-providers';
 import { Spacing } from '@/theme/colors';
 
@@ -38,6 +46,11 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** An email waiting to be confirmed: offer to send the link again. */
+  const [unconfirmed, setUnconfirmed] = useState<string | null>(null);
+  const usernameRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
 
   // Signed in (here, with Google or Apple, or from an emailed link): open the app.
   const signedIn = session.status === 'signed_in';
@@ -77,6 +90,7 @@ export default function SignInScreen() {
       await action();
     } catch (e) {
       setError(signInErrorMessage(e));
+      if (needsConfirmation(e)) setUnconfirmed(toSignInEmail(email));
     } finally {
       setBusy(false);
     }
@@ -84,26 +98,25 @@ export default function SignInScreen() {
 
   const submit = () =>
     run(async () => {
-      if (!email.trim() || !password) {
-        throw new Error(
-          signingUp ? 'Enter your email and a password.' : 'Enter your username and password.',
-        );
-      }
       if (!signingUp) {
+        if (!email.trim() || !password) {
+          throw new Error('Enter your username (or email) and password.');
+        }
         await signInWithEmail(toSignInEmail(email), password);
         return;
-      }
-      if (isUsername(email)) {
-        throw new Error('Enter an email address, such as name@example.com.');
       }
       if (!fullName.trim()) {
         throw new Error('Enter your name.');
       }
+      if (!isValidEmail(email)) {
+        throw new Error('Enter a real email address, such as name@gmail.com.');
+      }
       if (password.length < MIN_PASSWORD_LENGTH) {
         throw new Error(`Use a password with at least ${MIN_PASSWORD_LENGTH} characters.`);
       }
+      const address = email.trim();
       const created = await signUpWithEmail({
-        email: email.trim(),
+        email: address,
         password,
         fullName: fullName.trim(),
         username: username.trim().toLowerCase() || undefined,
@@ -111,8 +124,18 @@ export default function SignInScreen() {
       if (!created) {
         setMode('sign-in');
         setPassword('');
-        setNotice('Check your email and tap the link on this phone to confirm your account.');
+        setUnconfirmed(address);
+        setNotice(
+          `We sent a link to ${address}. Open it on this phone to confirm your account, then sign in here. No email? Check spam, or send it again below.`,
+        );
       }
+    });
+
+  const sendAgain = () =>
+    run(async () => {
+      if (!unconfirmed) return;
+      await resendConfirmation(unconfirmed);
+      setNotice(`We sent the link to ${unconfirmed} again. Open it on this phone, then sign in.`);
     });
 
   const forgotPassword = () =>
@@ -120,7 +143,7 @@ export default function SignInScreen() {
       if (isUsername(email)) {
         throw new Error('A password can only be reset for an account with an email address.');
       }
-      if (!email.trim()) {
+      if (!isValidEmail(email)) {
         throw new Error('Enter your email above first, then tap "Forgot password?" again.');
       }
       await requestPasswordReset(email.trim());
@@ -136,107 +159,121 @@ export default function SignInScreen() {
     setMode(signingUp ? 'sign-in' : 'sign-up');
     setError(null);
     setNotice(null);
+    setUnconfirmed(null);
   };
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <View style={styles.hero}>
-              <ThemedText type="title" accessibilityRole="header">
-                Schoology Grade Tracker
-              </ThemedText>
-              <ThemedText themeColor="textSecondary">
-                {signingUp
-                  ? 'Create an account to keep your grades and forecasts. Your Schoology password is never needed.'
-                  : 'Sign in to see your grades. Your Schoology password is never needed.'}
-              </ThemedText>
-            </View>
+        <KeyboardScroll contentContainerStyle={styles.content}>
+          <View style={styles.hero}>
+            <ThemedText type="title" accessibilityRole="header">
+              Schoology Grade Tracker
+            </ThemedText>
+            <ThemedText themeColor="textSecondary">
+              {signingUp
+                ? 'Create an account to keep your grades and forecasts. Your Schoology password is never needed.'
+                : 'Sign in to see your grades. Your Schoology password is never needed.'}
+            </ThemedText>
+          </View>
 
-            {signingUp ? (
-              <>
-                <TextField
-                  label="Name"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoComplete="name"
-                  textContentType="name"
-                />
-                <TextField
-                  label="Username (optional)"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholder="letters, numbers, _ or ."
-                />
-              </>
-            ) : null}
-            <TextField
-              label={signingUp ? 'Email' : 'Username or email'}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete={signingUp ? 'email' : 'username'}
-              keyboardType="email-address"
-              textContentType={signingUp ? 'emailAddress' : 'username'}
-            />
-            <TextField
-              label={signingUp ? `Password (at least ${MIN_PASSWORD_LENGTH} characters)` : 'Password'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete={signingUp ? 'new-password' : 'current-password'}
-              textContentType={signingUp ? 'newPassword' : 'password'}
-              onSubmitEditing={submit}
-            />
+          {signingUp ? (
+            <>
+              <TextField
+                label="Name"
+                value={fullName}
+                onChangeText={setFullName}
+                autoComplete="name"
+                textContentType="name"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => usernameRef.current?.focus()}
+              />
+              <TextField
+                ref={usernameRef}
+                label="Username (optional)"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="letters, numbers, _ or ."
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => emailRef.current?.focus()}
+              />
+            </>
+          ) : null}
+          <TextField
+            ref={emailRef}
+            label={signingUp ? 'Email' : 'Username or email'}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete={signingUp ? 'email' : 'username'}
+            keyboardType="email-address"
+            textContentType={signingUp ? 'emailAddress' : 'username'}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
+          <TextField
+            ref={passwordRef}
+            label={signingUp ? `Password (at least ${MIN_PASSWORD_LENGTH} characters)` : 'Password'}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete={signingUp ? 'new-password' : 'current-password'}
+            textContentType={signingUp ? 'newPassword' : 'password'}
+            returnKeyType={signingUp ? 'join' : 'go'}
+            onSubmitEditing={submit}
+          />
 
+          <KeepVisible>
             {error ? (
               <ThemedText themeColor="danger" accessibilityLiveRegion="polite">
                 {error}
               </ThemedText>
             ) : null}
             {notice ? <ThemedText accessibilityLiveRegion="polite">{notice}</ThemedText> : null}
-
             <Button
               label={busy ? 'Please wait…' : signingUp ? 'Create account' : 'Sign in'}
               variant="primary"
               disabled={busy}
               onPress={submit}
             />
-            {signingUp ? null : (
-              <Button label="Forgot password?" disabled={busy} onPress={forgotPassword} />
-            )}
+          </KeepVisible>
+          {unconfirmed && !signingUp ? (
+            <Button label="Send the email again" disabled={busy} onPress={sendAgain} />
+          ) : null}
+          {signingUp ? null : (
+            <Button label="Forgot password?" disabled={busy} onPress={forgotPassword} />
+          )}
 
-            <ThemedText type="small" themeColor="textSecondary" style={styles.or}>
-              or
-            </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.or}>
+            or
+          </ThemedText>
 
-            <AppleSignInButton
-              signUp={signingUp}
-              disabled={busy}
-              onPress={() => continueWith('apple-native')}
-            />
-            {signInProviders().map(({ provider, label }) => (
-              <Button
-                key={provider}
-                label={label}
-                disabled={busy}
-                onPress={() => continueWith(provider)}
-              />
-            ))}
+          <AppleSignInButton
+            signUp={signingUp}
+            disabled={busy}
+            onPress={() => continueWith('apple-native')}
+          />
+          {signInProviders().map(({ provider, label }) => (
             <Button
-              label={signingUp ? 'I already have an account' : 'Create an account'}
+              key={provider}
+              label={label}
               disabled={busy}
-              onPress={switchMode}
+              onPress={() => continueWith(provider)}
             />
-            <Button label="Privacy" disabled={busy} onPress={() => router.push('/privacy')} />
-          </ScrollView>
-        </KeyboardAvoidingView>
+          ))}
+          <Button
+            label={signingUp ? 'I already have an account' : 'Create an account'}
+            disabled={busy}
+            onPress={switchMode}
+          />
+          <Button label="Privacy" disabled={busy} onPress={() => router.push('/privacy')} />
+        </KeyboardScroll>
       </SafeAreaView>
     </ThemedView>
   );

@@ -2,7 +2,14 @@ import { describe, expect, it } from '@jest/globals';
 
 import { ApiError } from '@/api/errors';
 
-import { accountLabel, isUsername, signInErrorMessage, toSignInEmail } from '../sign-in-form';
+import {
+  accountLabel,
+  isUsername,
+  isValidEmail,
+  needsConfirmation,
+  signInErrorMessage,
+  toSignInEmail,
+} from '../sign-in-form';
 
 describe('toSignInEmail', () => {
   it('turns a username into the demo account email', () => {
@@ -16,6 +23,20 @@ describe('toSignInEmail', () => {
 
   it('leaves nothing as nothing', () => {
     expect(toSignInEmail('  ')).toBe('');
+  });
+});
+
+describe('isValidEmail', () => {
+  it('accepts ordinary addresses', () => {
+    for (const ok of ['name@gmail.com', ' pl1007463@ahschool.com ', 'a.b+c@mail.school.org']) {
+      expect(isValidEmail(ok)).toBe(true);
+    }
+  });
+
+  it('refuses what the server would refuse', () => {
+    for (const bad of ['', 'name', 'name@', '@gmail.com', 'name@gmail', 'name@gmail.c', 'a b@gmail.com', 'a@b@c.com', 'name@.com', 'name@gmail..com']) {
+      expect(isValidEmail(bad)).toBe(false);
+    }
   });
 });
 
@@ -42,9 +63,24 @@ describe('signInErrorMessage', () => {
     expect(signInErrorMessage(error)).toBe('Wrong username or password.');
   });
 
-  it('explains an unconfirmed email', () => {
+  it('explains an unconfirmed email, and offers to send it again', () => {
     const error = new ApiError('invalid_input', 'Email not confirmed', 'email_not_confirmed');
-    expect(signInErrorMessage(error)).toMatch(/Confirm your email/);
+    expect(signInErrorMessage(error)).toMatch(/not confirmed yet/);
+    expect(needsConfirmation(error)).toBe(true);
+    expect(needsConfirmation(new ApiError('invalid_input', 'x', 'invalid_credentials'))).toBe(false);
+  });
+
+  it('explains what the server says about a new account email', () => {
+    const cases: [string, RegExp][] = [
+      ['validation_failed', /real email address/],
+      ['email_address_invalid', /cannot be used/],
+      ['user_already_exists', /already exists/],
+      ['over_email_send_rate_limit', /Too many emails/],
+      ['email_address_not_authorized', /cannot send email/],
+    ];
+    for (const [code, message] of cases) {
+      expect(signInErrorMessage(new ApiError('invalid_input', 'server text', code))).toMatch(message);
+    }
   });
 
   it('falls back to the usual message', () => {
