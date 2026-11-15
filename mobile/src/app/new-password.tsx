@@ -1,15 +1,18 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { errorMessage, updatePassword, useSession } from '@/api';
 import { EmptyState } from '@/components/empty-state';
+import { FormSheet } from '@/components/form-sheet';
+import { KeepVisible } from '@/components/keyboard-scroll';
 import { Loading } from '@/components/loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
 import { showMessage } from '@/lib/coming-soon';
 import { checkNewPassword } from '@/lib/password-form';
+import { accountLabel } from '@/lib/sign-in-form';
 import { Spacing } from '@/theme/colors';
 
 /**
@@ -43,6 +46,7 @@ export default function NewPasswordScreen() {
   }
 
   const save = async () => {
+    if (busy) return;
     const problem = checkNewPassword(password, again);
     if (problem) {
       setError(problem);
@@ -62,46 +66,42 @@ export default function NewPasswordScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <ThemedText type="subtitle">Choose a new password</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            For {session.session.user.email ?? 'your account'}. Your grades are not changed.
+    <FormSheet>
+      <ThemedText type="subtitle">Choose a new password</ThemedText>
+      <ThemedText themeColor="textSecondary">
+        For {accountLabel(session.session.user)}. Your grades are not changed.
+      </ThemedText>
+      <TextField
+        label="New password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="new-password"
+        textContentType="newPassword"
+      />
+      <TextField
+        label="New password again"
+        value={again}
+        onChangeText={setAgain}
+        secureTextEntry
+        autoComplete="new-password"
+        textContentType="newPassword"
+        onSubmitEditing={save}
+      />
+      <KeepVisible>
+        {error ? (
+          <ThemedText themeColor="danger" accessibilityLiveRegion="polite">
+            {error}
           </ThemedText>
-          <TextField
-            label="New password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            textContentType="newPassword"
-          />
-          <TextField
-            label="New password again"
-            value={again}
-            onChangeText={setAgain}
-            secureTextEntry
-            autoComplete="new-password"
-            textContentType="newPassword"
-            onSubmitEditing={save}
-          />
-          {error ? (
-            <ThemedText themeColor="danger" accessibilityLiveRegion="polite">
-              {error}
-            </ThemedText>
-          ) : null}
-          <Button
-            label={busy ? 'Please wait…' : 'Save password'}
-            variant="primary"
-            disabled={busy}
-            onPress={save}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ThemedView>
+        ) : null}
+        <Button
+          label={busy ? 'Please wait…' : 'Save password'}
+          variant="primary"
+          disabled={busy}
+          onPress={save}
+        />
+      </KeepVisible>
+    </FormSheet>
   );
 }
 

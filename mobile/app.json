@@ -3,7 +3,7 @@
     "name": "Grade Tracker",
     "slug": "schoology-grade-tracker",
     "version": "1.0.0",
-    "description": "See, forecast and plan your Schoology grades. Works offline; an optional account syncs your grades between devices.",
+    "description": "See, forecast and plan your Schoology grades. Works offline, and your account syncs your grades between devices.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "gradetracker",

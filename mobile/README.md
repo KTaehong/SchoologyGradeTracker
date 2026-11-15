@@ -67,6 +67,8 @@ Supabase project, put the same two names in `.env.local`, which overrides
 npm test            # unit tests (Jest)
 npm run typecheck   # TypeScript
 npm run lint        # ESLint
+npm run test:e2e    # a browser uses the app like a student (see e2e/README.md)
+npm run test:monkey # random taps and junk typing
 ```
 
 ## Layout

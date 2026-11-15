@@ -24,6 +24,21 @@ export function isValidEmail(typed: string): boolean {
   return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[A-Za-z]{2,}$/.test(typed.trim());
 }
 
+/** The longest name a profile can hold (see supabase/migrations/*accounts.sql). */
+export const MAX_NAME_LENGTH = 100;
+
+/**
+ * What is wrong with an optional new username, or `null` when it is fine (or
+ * empty). The server would quietly swap a bad one for a made-up name.
+ */
+export function checkUsername(typed: string): string | null {
+  const name = typed.trim().toLowerCase();
+  if (name === '' || /^[a-z0-9_.]{3,30}$/.test(name)) {
+    return null;
+  }
+  return 'A username is 3 to 30 letters, numbers, _ or . with no spaces. You can also leave it empty.';
+}
+
 /** Whether what was typed is a username (no email address to send a reset link to). */
 export function isUsername(typed: string): boolean {
   const name = typed.trim();

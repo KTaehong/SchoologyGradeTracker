@@ -12,7 +12,7 @@ export default function AddGradesScreen() {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedText themeColor="textSecondary">
-          No password or login needed — your grades stay on this phone.
+          Your Schoology password is never needed. Pick how to bring your grades in.
         </ThemedText>
 
         <Section title="Import">

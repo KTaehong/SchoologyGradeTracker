@@ -4,6 +4,7 @@ import { ApiError } from '@/api/errors';
 
 import {
   accountLabel,
+  checkUsername,
   isUsername,
   isValidEmail,
   needsConfirmation,
@@ -85,5 +86,19 @@ describe('signInErrorMessage', () => {
 
   it('falls back to the usual message', () => {
     expect(signInErrorMessage(new ApiError('network', 'fetch failed'))).toMatch(/Could not reach/);
+  });
+});
+
+describe('checkUsername', () => {
+  it('accepts an empty or well-formed username', () => {
+    for (const ok of ['', '  ', 'ben', 'Ben.Ortiz_07', 'a'.repeat(30)]) {
+      expect(checkUsername(ok)).toBeNull();
+    }
+  });
+
+  it('explains a username the server would quietly replace', () => {
+    for (const bad of ['ab', 'ben ortiz', 'ben@home', 'a'.repeat(31), 'bén']) {
+      expect(checkUsername(bad)).toMatch(/3 to 30/);
+    }
   });
 });

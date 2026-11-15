@@ -1,19 +1,18 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 
 import type { CourseGrades } from '@/api';
 import { EmptyState } from '@/components/empty-state';
+import { FormError, FormSheet } from '@/components/form-sheet';
+import { KeepVisible } from '@/components/keyboard-scroll';
 import { Loading } from '@/components/loading';
 import { PeriodPicker } from '@/components/period-picker';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
 import { useCourseGrades, useGradebook } from '@/data/gradebook-store';
 import { DUE_DATE_PLACEHOLDER } from '@/lib/due-date';
 import { validateForecastScore, validateNewForecast } from '@/lib/forecast-form';
 import { useSave } from '@/lib/use-save';
-import { Spacing } from '@/theme/colors';
 
 type Params = {
   courseId: string;
@@ -30,19 +29,13 @@ type Params = {
 export default function ForecastScreen() {
   const params = useLocalSearchParams<Params>();
   return (
-    <ThemedView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {params.assignmentId ? (
-            <EditForecast params={{ ...params, assignmentId: params.assignmentId }} />
-          ) : (
-            <NewForecast courseId={params.courseId} />
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ThemedView>
+    <FormSheet>
+      {params.assignmentId ? (
+        <EditForecast params={{ ...params, assignmentId: params.assignmentId }} />
+      ) : (
+        <NewForecast courseId={params.courseId} />
+      )}
+    </FormSheet>
   );
 }
 
@@ -54,7 +47,7 @@ function EditForecast({ params }: { params: Params & { assignmentId: string } })
   const placeholder = params.isPlaceholder === '1';
 
   const submit = () => {
-    const result = validateForecastScore(score);
+    const result = validateForecastScore(score, Number(params.maxScore));
     if (!result.ok) {
       setError(result.error);
       return;
@@ -78,13 +71,15 @@ function EditForecast({ params }: { params: Params & { assignmentId: string } })
         autoFocus
         onSubmitEditing={submit}
       />
-      {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-      <Button
-        label={busy ? 'Saving…' : 'Save forecast'}
-        variant="primary"
-        disabled={busy}
-        onPress={submit}
-      />
+      <KeepVisible>
+        <FormError error={error} />
+        <Button
+          label={busy ? 'Saving…' : 'Save forecast'}
+          variant="primary"
+          disabled={busy}
+          onPress={submit}
+        />
+      </KeepVisible>
       {hasForecast ? (
         <Button
           label={placeholder ? 'Delete this forecast' : 'Clear forecast'}
@@ -185,23 +180,15 @@ function NewForecastForm({ course }: { course: CourseGrades }) {
         autoCapitalize="none"
         autoCorrect={false}
       />
-      {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-      <Button
-        label={busy ? 'Saving…' : 'Save forecast'}
-        variant="primary"
-        disabled={busy}
-        onPress={submit}
-      />
+      <KeepVisible>
+        <FormError error={error} />
+        <Button
+          label={busy ? 'Saving…' : 'Save forecast'}
+          variant="primary"
+          disabled={busy}
+          onPress={submit}
+        />
+      </KeepVisible>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-});

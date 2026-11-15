@@ -58,6 +58,18 @@ npm run lint
 npm test
 ```
 
+After changing a screen, a form, sign-in or sync, also test it like a user
+(the `test-like-a-user` skill in `.claude/skills/` says how):
+
+```bash
+npm run test:e2e      # a browser taps through the real app: sign-in, classes, calendar
+npm run test:monkey   # random taps and junk typing; must not break anything
+```
+
+These need `npx playwright install chromium` once, and a test account in the
+git-ignored `mobile/.env.local` (`E2E_EMAIL`, `E2E_PASSWORD`); without it the
+signed-in tests are skipped. See `mobile/e2e/README.md`.
+
 `npm run test:live` (optional) checks the hosted backend itself over the
 network; it needs a throwaway confirmed account in `LIVE_TEST_EMAIL` /
 `LIVE_TEST_PASSWORD` and deletes that account at the end.
@@ -83,6 +95,7 @@ is needed. `npx expo-doctor` checks the Expo project.
 ## Where things are
 
 - `mobile/README.md` — code layout, screen by screen.
+- `mobile/e2e/README.md` — the user-style tests (journeys and the monkey test).
 - `docs/sync.md` — how offline-first sync works.
 - `docs/database/README.md` — tables, security rules, grade API.
 - `docs/store-release-checklist.md` — what is left for the App Store and Play.

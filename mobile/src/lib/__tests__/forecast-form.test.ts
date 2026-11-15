@@ -79,3 +79,17 @@ describe('grade formatting', () => {
     expect(formatPoints(8.5, 10)).toBe('8.5 / 10');
   });
 });
+
+describe('a mistyped score', () => {
+  it('refuses a forecast far above the points possible', () => {
+    expect(validateForecastScore('1000', 10).ok).toBe(false);
+    expect(validateForecastScore('12', 10)).toEqual({ ok: true, value: 12 });
+    expect(validateForecastScore('20', 10).ok).toBe(true);
+  });
+
+  it('checks a new forecast against its own points possible', () => {
+    const form = { categoryId: 'c1', title: 'Quiz', maxScore: '10', forecastScore: '95', dueDate: '' };
+    expect(validateNewForecast(form).ok).toBe(false);
+    expect(validateNewForecast({ ...form, forecastScore: '9.5' }).ok).toBe(true);
+  });
+});

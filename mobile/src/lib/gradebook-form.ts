@@ -7,7 +7,7 @@ import type { AssignmentFields, CategoryFields, CourseFields, NewPeriod } from '
 import type { GradingMode } from '@/data/types';
 
 import { DUE_DATE_ERROR, parseDueDate } from './due-date';
-import { parseScore, type FormResult } from './forecast-form';
+import { farOverMaxError, isFarOverMax, parseScore, type FormResult } from './forecast-form';
 
 /** How the school year is split. Names follow Schoology, so semesters are inferred (Q1/Q2 → 1). */
 export const PERIOD_PRESETS: { label: string; periods: NewPeriod[] }[] = [
@@ -109,6 +109,9 @@ export function validateAssignment(form: AssignmentForm): FormResult<AssignmentF
   }
   if (maxScore > 999999 || (actualScore ?? 0) > 999999) {
     return { ok: false, error: 'That score is too large.' };
+  }
+  if (actualScore !== null && !form.extraCredit && isFarOverMax(actualScore, maxScore)) {
+    return { ok: false, error: farOverMaxError(maxScore) };
   }
   const dueDate = parseDueDate(form.dueDate);
   if (dueDate === null) {

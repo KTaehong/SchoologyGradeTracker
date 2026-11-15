@@ -30,6 +30,6 @@ export function timeAgo(then: Date, now: Date = new Date()): string {
   if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes} min ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return `${hours} hr ago`;
   return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }

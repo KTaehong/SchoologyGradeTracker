@@ -45,6 +45,11 @@ select pg_temp.expect('the seed.sql students got the password and an email login
       and u.email_change = '' and u.email_change_token_new = ''
       and (select count(*) from auth.identities i
             where i.user_id = u.id and i.provider = 'email') = 1), 3::bigint);
+select pg_temp.expect('the seed.sql students are marked as signing in with a password, once',
+  (select count(*) from auth.users u
+    where u.email in ('ana.park@example.com', 'ben.ortiz@example.com', 'chris.lee@example.com')
+      and (select count(*) from jsonb_array_elements_text(u.raw_app_meta_data -> 'providers') p
+            where p = 'email') = 1), 3::bigint);
 
 -- 2. Different courses for each student, and the second run added nothing.
 select pg_temp.expect('courses per student (jordan, maya, sam)',
