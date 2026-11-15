@@ -74,6 +74,7 @@ import {
 } from '@/import/calendar-link';
 import { attachAccount, detachAccount } from '@/sync/account';
 import { onReconnect, useOnline } from '@/sync/connectivity';
+import { retryDelayMs } from '@/sync/retry';
 import { createSupabaseTransport, watchRemoteChanges } from '@/sync/supabase-sync';
 import { SyncEngine, type SyncStatus } from '@/sync/sync-engine';
 
@@ -275,6 +276,21 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     };
   }, [db, userId, reload]);
 
+  // A failed sync tries again by itself (see sync/retry.ts), sooner at first.
+  const syncFailures = useRef(0);
+  const syncState = sync?.state ?? null;
+  useEffect(() => {
+    if (syncState === 'idle') syncFailures.current = 0;
+    if (syncState !== 'offline' && syncState !== 'error') return;
+    syncFailures.current += 1;
+    const delay = retryDelayMs(syncState, syncFailures.current);
+    if (delay === null) return;
+    const timer = setTimeout(() => {
+      if (AppState.currentState !== 'background') engineRef.current?.sync();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [syncState]);
+
   /** Reads the feed at `url` into the gradebook. */
   const loadFeed = useCallback(async (database: SqlDb, url: string) => {
     const events = await fetchCalendar(url);
@@ -402,6 +418,11 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       loadSample: () =>
         edit(async (d) => {
           const sample = createSampleGradebook(newId);
+          // A second tap would add every sample class twice.
+          const have = new Set((await readCourses(d)).map((c) => c.name));
+          if (sample.courses.some((c) => have.has(c.name))) {
+            throw new Error('The sample classes are already in your gradebook.');
+          }
           await insertCourses(d, sample.courses, 'sample');
           await insertUpcoming(d, sample.upcoming);
         }),

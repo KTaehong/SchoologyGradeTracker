@@ -93,3 +93,18 @@ describe('numberText', () => {
     expect(numberText(undefined)).toBe('');
   });
 });
+
+describe('a mistyped assignment score', () => {
+  const form = { title: 'Quiz', actualScore: '1000', maxScore: '10', dueDate: '', excused: false, extraCredit: false };
+
+  it('refuses a score far above the points possible', () => {
+    const result = validateAssignment(form);
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.error).toMatch(/far more than the 10 points/);
+  });
+
+  it('allows bonus points and extra credit', () => {
+    expect(validateAssignment({ ...form, actualScore: '12' }).ok).toBe(true);
+    expect(validateAssignment({ ...form, actualScore: '50', extraCredit: true }).ok).toBe(true);
+  });
+});

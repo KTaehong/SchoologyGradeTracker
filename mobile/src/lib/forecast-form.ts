@@ -18,13 +18,28 @@ export function parseScore(text: string): number | null {
   return Number(trimmed);
 }
 
-export function validateForecastScore(text: string): FormResult<number> {
+/**
+ * A score far above the points possible is a slip of the finger (1000 out of
+ * 10 shows as a 10000% grade). Bonus points are fine: up to double.
+ */
+export function isFarOverMax(score: number, maxScore: number): boolean {
+  return maxScore > 0 && score > maxScore * 2;
+}
+
+export const farOverMaxError = (maxScore: number) =>
+  `That is far more than the ${maxScore} points possible. Check both numbers.`;
+
+/** `maxScore`: the points possible, when known, to catch a mistyped score. */
+export function validateForecastScore(text: string, maxScore?: number): FormResult<number> {
   const score = parseScore(text);
   if (score === null) {
     return { ok: false, error: 'Enter the points you expect, for example 8 or 8.5.' };
   }
   if (score > MAX_SCORE) {
     return { ok: false, error: 'That score is too large.' };
+  }
+  if (maxScore !== undefined && Number.isFinite(maxScore) && isFarOverMax(score, maxScore)) {
+    return { ok: false, error: farOverMaxError(maxScore) };
   }
   return { ok: true, value: score };
 }
@@ -56,7 +71,7 @@ export function validateNewForecast(form: NewForecastForm): FormResult<NewForeca
   if (maxScore > MAX_SCORE) {
     return { ok: false, error: 'That score is too large.' };
   }
-  const forecast = validateForecastScore(form.forecastScore);
+  const forecast = validateForecastScore(form.forecastScore, maxScore);
   if (!forecast.ok) {
     return forecast;
   }

@@ -374,6 +374,12 @@ begin
          recovery_token = coalesce(recovery_token, ''),
          email_change = coalesce(email_change, ''),
          email_change_token_new = coalesce(email_change_token_new, ''),
+         -- They sign in with a password, so the app offers "Change password".
+         raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+           || jsonb_build_object('providers',
+                (select jsonb_agg(distinct p)
+                   from jsonb_array_elements_text(
+                          coalesce(raw_app_meta_data -> 'providers', '[]'::jsonb) || '["email"]'::jsonb) p)),
          updated_at = now()
    where id in ('11111111-1111-4111-8111-111111111111',
                 '22222222-2222-4222-8222-222222222222',

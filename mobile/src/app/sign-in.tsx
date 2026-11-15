@@ -23,8 +23,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-form';
 import {
+  checkUsername,
   isUsername,
   isValidEmail,
+  MAX_NAME_LENGTH,
   needsConfirmation,
   signInErrorMessage,
   toSignInEmail,
@@ -51,6 +53,8 @@ export default function SignInScreen() {
   const usernameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
+  /** True while a request is running, so a double tap or Enter cannot send two. */
+  const running = useRef(false);
 
   // Signed in (here, with Google or Apple, or from an emailed link): open the app.
   const signedIn = session.status === 'signed_in';
@@ -83,6 +87,8 @@ export default function SignInScreen() {
   const signingUp = mode === 'sign-up';
 
   async function run(action: () => Promise<unknown>) {
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -92,6 +98,7 @@ export default function SignInScreen() {
       setError(signInErrorMessage(e));
       if (needsConfirmation(e)) setUnconfirmed(toSignInEmail(email));
     } finally {
+      running.current = false;
       setBusy(false);
     }
   }
@@ -107,6 +114,13 @@ export default function SignInScreen() {
       }
       if (!fullName.trim()) {
         throw new Error('Enter your name.');
+      }
+      if (fullName.trim().length > MAX_NAME_LENGTH) {
+        throw new Error(`That name is too long (${MAX_NAME_LENGTH} characters at most).`);
+      }
+      const usernameProblem = checkUsername(username);
+      if (usernameProblem) {
+        throw new Error(usernameProblem);
       }
       if (!isValidEmail(email)) {
         throw new Error('Enter a real email address, such as name@gmail.com.');

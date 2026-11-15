@@ -28,6 +28,7 @@ function ThemedNavigation() {
         <Stack.Screen name="sign-in" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" options={{ title: 'Not found' }} />
         <Stack.Screen name="new-password" options={{ title: 'Password', presentation: 'modal' }} />
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
