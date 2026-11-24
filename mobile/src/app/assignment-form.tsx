@@ -9,7 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, Section, SwitchRow, TextField } from '@/components/ui';
 import { useCourse, useGradebook } from '@/data/gradebook-store';
 import type { GradeAssignment, GradeCategory, GradeCourse } from '@/engine/types';
-import { confirmAction } from '@/lib/coming-soon';
+import { confirmAction } from '@/lib/dialogs';
 import { DUE_DATE_PLACEHOLDER, dueDateFieldText } from '@/lib/due-date';
 import { numberText, validateAssignment } from '@/lib/gradebook-form';
 import { useSave } from '@/lib/use-save';

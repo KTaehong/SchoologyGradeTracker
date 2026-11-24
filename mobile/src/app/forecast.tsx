@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-import type { CourseGrades } from '@/api';
+import type { CourseGrades } from '@/engine/grade-types';
 import { EmptyState } from '@/components/empty-state';
 import { FormError, FormSheet } from '@/components/form-sheet';
 import { KeepVisible } from '@/components/keyboard-scroll';

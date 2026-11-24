@@ -7,8 +7,8 @@ import { isApiConfigured, useSession } from '@/api';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Row, Section } from '@/components/ui';
-import { useGradebook } from '@/data/gradebook-store';
-import { confirmAction, runOrWarn } from '@/lib/coming-soon';
+import { UnsentChangesError, useGradebook } from '@/data/gradebook-store';
+import { askFirst, confirmAction, runOrWarn } from '@/lib/dialogs';
 import { formatRefreshed } from '@/lib/calendar-label';
 import { hasPassword } from '@/lib/password-form';
 import { accountLabel } from '@/lib/sign-in-form';
@@ -49,7 +49,7 @@ export default function SettingsScreen() {
 
       <Section
         title="Account & sync"
-        footer="Your grades sync to your other devices and are kept if you reinstall. You sign in again each time you open the app.">
+        footer="Your grades sync to your other devices and are kept if you reinstall. You stay signed in on this phone until you sign out.">
         <AccountRows />
       </Section>
 
@@ -90,6 +90,15 @@ function AccountRows() {
     setSigningOut(true);
     try {
       await signOut();
+    } catch (e) {
+      if (!(e instanceof UnsentChangesError)) throw e;
+      const discard = await askFirst(
+        'Not everything is saved',
+        `${e.message} If you sign out now, ${e.count === 1 ? 'it is' : 'they are'} lost.`,
+        'Sign out anyway',
+        'Stay signed in',
+      );
+      if (discard) await signOut(true);
     } finally {
       setSigningOut(false);
     }
@@ -118,7 +127,7 @@ function AccountRows() {
             confirmAction(
               'Sign out?',
               sync && sync.pending > 0
-                ? `${sync.pending} ${sync.pending === 1 ? 'change has' : 'changes have'} not reached the cloud yet. Signing out tries once more, then removes this phone's copy — unsent changes would be lost.`
+                ? `${sync.pending} ${sync.pending === 1 ? 'change has' : 'changes have'} not reached the cloud yet. Signing out sends them first, then removes this phone's copy.`
                 : "Your account keeps its grades and forecasts. This phone's copy is removed until you sign in again.",
               'Sign out',
               signOutNow,

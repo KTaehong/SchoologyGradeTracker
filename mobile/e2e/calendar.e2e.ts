@@ -82,6 +82,15 @@ test.describe('Schoology calendar', () => {
     await connect.click();
     await expect(text(page, /did not return a calendar/)).toBeVisible();
 
+    // An empty feed clears items an interrupted run left in the account.
+    setFeed([]);
+    await field(page, 'Calendar link').fill(GOOD_LINK);
+    await connect.click();
+    await expect(text(page, /^Calendar updated: 0 new/)).toBeVisible();
+    await button(page, 'Disconnect').click();
+    await expect(connect).toBeVisible();
+    setFeed(['E2E Quiz on Limits', 'E2E Lab Report']);
+
     // The real thing, as Schoology shows it (webcal://).
     await field(page, 'Calendar link').fill(GOOD_LINK);
     await connect.click();
@@ -107,8 +116,9 @@ test.describe('Schoology calendar', () => {
     await openTab(page, 'Home');
     await expect(text(page, 'Due soon')).toBeVisible();
 
-    // The link is remembered for this account after signing in again.
-    await signIn(page);
+    // The link is still there after opening the app again.
+    await page.goto('/');
+    await expect(text(page, 'Your classes')).toBeVisible({ timeout: 60_000 });
     await openTab(page, 'Settings');
     await expect(text(page, /^Connected · updated/)).toBeVisible();
 

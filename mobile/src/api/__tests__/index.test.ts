@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { gradesApi, getSession, isApiConfigured, signOut } from '..';
+import { getSession, isApiConfigured, signOut } from '..';
+import { getSupabase } from '../client';
+import { createRpcCaller } from '../rpc';
 
 // Tests run without EXPO_PUBLIC_SUPABASE_*, like a build with cloud sync not set up.
 describe('the API without configuration', () => {
@@ -13,7 +15,7 @@ describe('the API without configuration', () => {
     await expect(signOut()).resolves.toBeUndefined();
   });
 
-  it('rejects grade calls with not_configured', async () => {
-    await expect(gradesApi.getGrades()).rejects.toMatchObject({ kind: 'not_configured' });
+  it('rejects calls with not_configured', async () => {
+    await expect(createRpcCaller(getSupabase)('pull_changes')).rejects.toMatchObject({ kind: 'not_configured' });
   });
 });

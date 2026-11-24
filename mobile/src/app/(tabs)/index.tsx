@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useSession, type CourseGrades } from '@/api';
+import { useSession } from '@/api';
 import { EmptyState } from '@/components/empty-state';
 import { Loading } from '@/components/loading';
 import { Screen } from '@/components/screen';
@@ -9,8 +9,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Row, Section } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
+import type { CourseGrades } from '@/engine/grade-types';
 import { formatDayLabel, formatDueTime, groupUpcomingByDay } from '@/data/upcoming';
-import { runOrWarn } from '@/lib/coming-soon';
+import { runOrWarn } from '@/lib/dialogs';
 import { formatPercent } from '@/lib/format-grade';
 import { greeting, firstName } from '@/lib/greeting';
 import { syncLabel } from '@/lib/sync-label';

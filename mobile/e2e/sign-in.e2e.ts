@@ -1,7 +1,7 @@
-import { ACCOUNT, answerDialogs, button, expect, field, hasAccount, launch, openTab, signIn, test, text } from './support/app';
+import { ACCOUNT, answerDialogs, button, expect, field, hasAccount, launch, openTab, signIn, test, text, waitForSync } from './support/app';
 
 test.describe('opening the app', () => {
-  test('starts signed out, on the sign-in screen', async ({ page }) => {
+  test('a new install starts on the sign-in screen', async ({ page }) => {
     await launch(page);
     await expect(page.getByRole('heading', { name: 'Schoology Grade Tracker' })).toBeVisible();
     await expect(field(page, 'Username or email')).toBeVisible();
@@ -59,11 +59,11 @@ test.describe('creating an account', () => {
     await expect(text(page, 'Enter your name.')).toBeVisible();
   });
 
-  test('says so when the email already has an account', async ({ page }) => {
+  test('does not reveal that an email already has an account', async ({ page }) => {
     test.skip(!hasAccount || !ACCOUNT.email.includes('@'), 'needs E2E_EMAIL');
     await field(page, 'Email').fill(ACCOUNT.email);
     await button(page, 'Create account').click();
-    await expect(text(page, 'An account with this email already exists. Sign in instead.')).toBeVisible({
+    await expect(text(page, /If you already have an account, no email is sent/)).toBeVisible({
       timeout: 30_000,
     });
   });
@@ -103,11 +103,27 @@ test.describe('signing in', () => {
     expect(requests).toBe(1);
   });
 
-  test('opening the app again asks for a sign-in again', async ({ page }) => {
+  test('opening the app again goes straight to the grades', async ({ page }) => {
     await signIn(page);
     await page.reload();
-    await expect(button(page, 'Sign in')).toBeVisible({ timeout: 60_000 });
-    await expect(text(page, 'Your classes')).toHaveCount(0);
+    await expect(text(page, 'Your classes')).toBeVisible({ timeout: 60_000 });
+    await expect(button(page, 'Sign in')).toHaveCount(0);
+  });
+
+  test('opening the app with the server out of reach still shows the grades', async ({ page }) => {
+    await signIn(page);
+    await waitForSync(page);
+    await page.route(/supabase\.co/, (route) => route.abort());
+    // Make the saved access token look expired, as it is after an hour.
+    await page.evaluate(() => {
+      for (const key of Object.keys(localStorage).filter((k) => /^sb-.*-auth-token$/.test(k))) {
+        const session = JSON.parse(localStorage.getItem(key)!);
+        localStorage.setItem(key, JSON.stringify({ ...session, expires_at: 1 }));
+      }
+    });
+    await page.goto('/');
+    await expect(text(page, 'Your classes')).toBeVisible({ timeout: 60_000 });
+    await expect(button(page, 'Sign in')).toHaveCount(0);
   });
 
   test('Sign out returns to the sign-in screen, and Back does not get back in', async ({ page }) => {

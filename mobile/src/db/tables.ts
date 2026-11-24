@@ -44,6 +44,14 @@ export const CHILDREN: Partial<Record<SyncTable, { table: SyncTable; column: str
   categories: [{ table: 'assignments', column: 'category_id' }],
 };
 
+/** Each table's parent: the server refuses a row whose parent it does not have. */
+export const PARENT: Partial<Record<SyncTable, { table: SyncTable; column: string }>> = {
+  grading_periods: { table: 'courses', column: 'course_id' },
+  categories: { table: 'grading_periods', column: 'period_id' },
+  assignments: { table: 'categories', column: 'category_id' },
+  upcoming_items: { table: 'courses', column: 'course_id' },
+};
+
 export function isSyncTable(name: string): name is SyncTable {
   return (SYNC_TABLES as readonly string[]).includes(name);
 }

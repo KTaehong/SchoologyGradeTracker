@@ -8,7 +8,7 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
-import { runOrWarn } from '@/lib/coming-soon';
+import { runOrWarn } from '@/lib/dialogs';
 import { syncLabel } from '@/lib/sync-label';
 
 /** Grades home (F02): every course with its grade, computed on this phone. */

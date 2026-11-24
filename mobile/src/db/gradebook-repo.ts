@@ -5,7 +5,7 @@
  * the sync engine (src/sync/) knows to push it. Rows that come down from the
  * cloud are written by the sync engine instead, with `dirty = 0`.
  */
-import type { NewForecast } from '@/api/grades';
+import type { NewForecast } from '@/engine/grade-types';
 import type { UpcomingItem } from '@/data/types';
 import type {
   GradeAssignment,
@@ -247,14 +247,18 @@ export type FeedSaveResult = { added: number; updated: number; removed: number }
  * deleted. Rows are matched on `external_uid`; other upcoming items (like the
  * sample's) are left alone. A class picked earlier is kept when the new fetch
  * could not place the item.
+ *
+ * `inTransaction` runs first, in the same transaction; if it throws, nothing is saved.
  */
 export async function saveFeedItems(
   db: SqlDb,
   newId: () => string,
   items: FeedItemInput[],
   uidPrefix: string,
+  inTransaction?: () => Promise<void>,
 ): Promise<FeedSaveResult> {
   return db.transaction(async () => {
+    await inTransaction?.();
     const rows = await db.all<FeedRow>(
       'select id, external_uid, course_id, title, due_at, url, deleted from upcoming_items where external_uid like ?',
       [`${uidPrefix}%`],
@@ -361,12 +365,15 @@ export async function eraseGradebook(db: SqlDb, keepTombstones: boolean): Promis
 
 /** Deletes everything on this phone with no tombstones (sign-out, switching accounts). */
 export async function wipeLocalData(db: SqlDb): Promise<void> {
-  await db.transaction(async () => {
-    for (const table of SYNC_TABLES) {
-      await db.run(`delete from ${table}`);
-    }
-    await db.run(`delete from meta where key in ('account_id', 'sync_cursor', 'last_synced_at', 'calendar_refreshed_at')`);
-  });
+  await db.transaction(() => wipeRows(db));
+}
+
+/** The same, as part of a transaction the caller already started. */
+export async function wipeRows(db: SqlDb): Promise<void> {
+  for (const table of SYNC_TABLES) {
+    await db.run(`delete from ${table}`);
+  }
+  await db.run(`delete from meta where key in ('account_id', 'sync_cursor', 'last_synced_at', 'calendar_refreshed_at')`);
 }
 
 /** Marks a row deleted (to push), and deletes its children here (the server cascades). */
@@ -649,7 +656,9 @@ const sameTitle = (title: string) => title.trim().replace(/\s+/g, ' ').toLowerCa
  * Saves rows read off a screenshot (F04). A row whose category already has an
  * assignment with the same name updates that assignment's score (so scanning
  * the same page again does not add copies); the rest are added. Forecasts are
- * kept; a real score replaces a forecast-only placeholder.
+ * kept; a real score replaces a forecast-only placeholder. A score already
+ * saved is kept when the new row has none: the reader may have missed it. Two
+ * rows with the same name stay two assignments.
  */
 export async function saveScreenshotRows(
   db: SqlDb,
@@ -658,6 +667,7 @@ export async function saveScreenshotRows(
 ): Promise<ScreenshotSaveResult> {
   return db.transaction(async () => {
     const result: ScreenshotSaveResult = { added: 0, updated: 0 };
+    const saved = new Set<string>();
     for (const row of rows) {
       await requireRow(db, 'categories', row.categoryId, 'category');
       const existing = (
@@ -665,23 +675,26 @@ export async function saveScreenshotRows(
           'select id, title, is_placeholder from assignments where category_id = ? and deleted = 0',
           [row.categoryId],
         )
-      ).find((a) => sameTitle(a.title) === sameTitle(row.title));
+      ).find((a) => !saved.has(a.id) && sameTitle(a.title) === sameTitle(row.title));
       if (existing) {
         const placeholder = existing.is_placeholder === 1 && row.actualScore === null;
         await db.run(
-          `update assignments set max_score = ?, actual_score = ?, excused = ?, is_placeholder = ?,
+          `update assignments set max_score = ?, actual_score = coalesce(?, actual_score), excused = ?, is_placeholder = ?,
              due_date = coalesce(?, due_date), dirty = dirty + 1
            where id = ?`,
           [row.maxScore, row.actualScore, bool(row.excused), bool(placeholder), row.dueDate, existing.id],
         );
+        saved.add(existing.id);
         result.updated++;
       } else {
+        const id = newId();
+        saved.add(id);
         await db.run(
           `insert into assignments (id, category_id, title, due_date, max_score, actual_score,
              excused, source, position, dirty)
            values (?, ?, ?, ?, ?, ?, ?, 'screenshot', ?, 1)`,
           [
-            newId(),
+            id,
             row.categoryId,
             row.title,
             row.dueDate,

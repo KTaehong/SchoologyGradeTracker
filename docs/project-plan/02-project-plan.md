@@ -5,6 +5,10 @@
 [`../mvp.md`](../mvp.md). Effort is **base** AI-assisted hours; **Planned** =
 base × 1.5.*
 
+> **Historical plan (September 2026).** Since October 2026 the app needs an account
+> and syncs by itself, so "no login" (T1.3) and "opt-in sync" (T3.4) below are out
+> of date. The current behavior is in [`../mvp.md`](../mvp.md).
+
 ## Scope framing
 
 This plan treats the MVP as a **build from scratch**: every one of the 14 MVP

@@ -1,18 +1,12 @@
 /**
  * Test helper: an in-memory stand-in for pull_changes / push_changes with the
- * same rules as supabase/migrations/20261006000600_sync.sql (per-row
- * revisions, tombstones, orphans skipped, deletes cascade).
+ * same rules as the real ones in supabase/migrations/ (per-row revisions,
+ * tombstones, orphans skipped and reported, deletes cascade).
  */
 import { ApiError } from '@/api/errors';
-import { CHILDREN, isSyncTable, SYNC_TABLES, type SyncTable } from '@/db/tables';
-import type { ChangeSet, PullResult, WireRow } from '@/sync/changes';
+import { CHILDREN, isSyncTable, PARENT, SYNC_TABLES, type SyncTable } from '@/db/tables';
+import type { ChangeSet, Deletion, PullResult, WireRow } from '@/sync/changes';
 import type { SyncTransport } from '@/sync/sync-engine';
-
-const PARENT: Partial<Record<SyncTable, { table: SyncTable; column: string }>> = {
-  grading_periods: { table: 'courses', column: 'course_id' },
-  categories: { table: 'grading_periods', column: 'period_id' },
-  assignments: { table: 'categories', column: 'category_id' },
-};
 
 export class FakeSyncServer {
   revision = 0;
@@ -56,18 +50,24 @@ export class FakeSyncServer {
       push: async (changes: ChangeSet) => {
         check();
         this.pushes++;
+        const skipped: Deletion[] = [];
         for (const table of SYNC_TABLES) {
           for (const row of changes[table] ?? []) {
             const parent = PARENT[table];
-            if (parent && !this.rows.get(parent.table)!.has(String(row[parent.column]))) continue;
+            const saved = structuredClone(row);
+            if (parent && row[parent.column] && !this.rows.get(parent.table)!.has(String(row[parent.column]))) {
+              skipped.push({ table_name: table, row_id: String(row.id) });
+              if (table !== 'upcoming_items') continue;
+              saved[parent.column] = null;
+            }
             this.tombstones.delete(`${table}:${row.id}`);
-            this.rows.get(table)!.set(String(row.id), { row: structuredClone(row), revision: ++this.revision });
+            this.rows.get(table)!.set(String(row.id), { row: saved, revision: ++this.revision });
           }
         }
         for (const d of changes.deleted) {
           if (isSyncTable(d.table_name)) this.remove(d.table_name, d.row_id);
         }
-        return { revision: this.revision };
+        return { revision: this.revision, skipped };
       },
     };
   }

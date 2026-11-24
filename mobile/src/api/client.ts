@@ -1,15 +1,23 @@
 import 'react-native-url-polyfill/auto';
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { AppState, Platform } from 'react-native';
 
 import { readApiConfig } from './config';
 import { ApiError } from './errors';
-import { createWebSessionStorage, signOutOnResume, startSignedOut } from './launch-session-storage';
-import { createSecureSessionStorage } from './secure-session-storage';
+import { createSecureSessionStorage, type SessionStorage } from './secure-session-storage';
+import { parseStoredSession, sessionStorageKey } from './stored-session';
+import { createWebSessionStorage } from './web-session-storage';
 
 let client: SupabaseClient | null = null;
+let storage: SessionStorage | null = null;
+
+/** The Keychain / Keystore on phones. The web build has neither, so it uses localStorage. */
+function getSessionStorage(): SessionStorage {
+  storage ??= Platform.OS === 'web' ? createWebSessionStorage() : createSecureSessionStorage(SecureStore);
+  return storage;
+}
 
 /** Whether the cloud API settings are present in this build. */
 export function isApiConfigured(): boolean {
@@ -19,8 +27,8 @@ export function isApiConfigured(): boolean {
 /**
  * The one Supabase client for the whole app.
  *
- * After sign-in, supabase-js keeps the session in secure storage until the app
- * is closed, refreshes the access token before it expires, and sends it as
+ * After sign-in, supabase-js keeps the session in secure storage until the
+ * student signs out, refreshes the access token before it expires, and sends it as
  * `Authorization: Bearer …` on every request. So API code never handles tokens: it only calls
  * `getSupabase().rpc(...)` or `.from(...)`.
  */
@@ -38,41 +46,38 @@ export function getSupabase(): SupabaseClient {
 
   const created = createClient(config.url, config.anonKey, {
     auth: {
-      // Every launch starts signed out (see startSignedOut). The web build has
-      // no Keychain, so it uses localStorage.
-      storage: startSignedOut(
-        Platform.OS === 'web' ? createWebSessionStorage() : createSecureSessionStorage(SecureStore),
-      ),
+      storage: getSessionStorage(),
+      storageKey: sessionStorageKey(config.url),
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      // Google / Apple / Microsoft sign-in returns a one-time code to the app,
+      // Google sign-in returns a one-time code to the app,
       // which is swapped for a session (see signInWithProvider in auth.ts).
       flowType: 'pkce',
     },
   });
 
-  // Refresh tokens only while the app is on screen, as Supabase recommends for
-  // mobile. Coming back after a long time away counts as a new launch: the
-  // session is dropped from this phone (the account and its grades are kept).
+  // Refresh tokens only while the app is on screen, as Supabase recommends for mobile.
   if (Platform.OS !== 'web') {
-    let backgroundSince: number | null = null;
     AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        const away = backgroundSince;
-        backgroundSince = null;
-        if (signOutOnResume(away, Date.now())) {
-          created.auth.signOut({ scope: 'local' }).catch(() => undefined);
-          return;
-        }
-        created.auth.startAutoRefresh();
-      } else {
-        if (state === 'background' && backgroundSince === null) backgroundSince = Date.now();
-        created.auth.stopAutoRefresh();
-      }
+      if (state === 'active') created.auth.startAutoRefresh();
+      else created.auth.stopAutoRefresh();
     });
   }
 
   client = created;
   return created;
+}
+
+/**
+ * The session saved on this phone, read without the network. Its access token
+ * may have expired: use this to know who is signed in (so the app opens with
+ * no internet), never to call the server.
+ */
+export async function readStoredSession(): Promise<Session | null> {
+  const config = readApiConfig();
+  if (!config) {
+    return null;
+  }
+  return parseStoredSession(await getSessionStorage().getItem(sessionStorageKey(config.url)));
 }

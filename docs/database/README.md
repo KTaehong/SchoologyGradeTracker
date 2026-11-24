@@ -1,6 +1,6 @@
 # Database design — Schoology Grade Tracker
 
-The cloud database behind **opt-in cloud sync (F14)**. It stores each student's
+The cloud database behind **cloud sync (F14)**. It stores each student's
 account and gradebook, computes grades with the same rules as the app, and keeps
 every student's data private to them.
 
@@ -483,15 +483,17 @@ the migrations, runs the test files, loads the seed twice, and runs `demo.sql`.
 
 Supabase publishes every function in `public` as an HTTP endpoint,
 `POST {Project URL}/rest/v1/rpc/<name>`, with the arguments as a JSON body.
-The app calls them through [`mobile/src/api/`](../../mobile/src/api/)
-(`gradesApi.getGrades()`, …), which wraps `supabase.rpc(...)`.
+The app calls them through [`mobile/src/api/rpc.ts`](../../mobile/src/api/rpc.ts).
+**No screen uses the grade API below:** the app computes grades on the phone. It
+is kept for checking, and the tests call it through
+`mobile/src/test-support/grades-api.ts`.
 
 ### Authentication
 None of the endpoints take a user id or a token as an argument. The caller is
 whoever the `Authorization: Bearer <access token>` header names:
 
 1. The student signs in with Supabase Auth (`signInWithEmail` in
-   `mobile/src/api/auth.ts`; Google / Apple / Microsoft later use the same client).
+   `mobile/src/api/auth.ts`; Google and Apple use the same client).
 2. supabase-js saves the session in the phone's secure storage (Keychain /
    Keystore, split into chunks because a session is larger than one secure
    value), refreshes the access token before it expires, and adds the header
@@ -500,10 +502,10 @@ whoever the `Authorization: Bearer <access token>` header names:
    as the caller (SECURITY INVOKER), so row-level security limits them to the
    student's own rows.
 
-So a new endpoint only needs `perform public.require_student();` at the top,
-and a new app call only needs `call('<function>', { args })` in
-`mobile/src/api/grades.ts`. Nothing handles tokens by hand. `anon` cannot
-execute the API functions at all.
+So a new endpoint only needs `perform public.require_student();` at the top, a
+`revoke execute … from public, anon`, and `call('<function>', { args })` in the
+app. Nothing handles tokens by hand. `anon` has no access to any table, view or
+function (`20261123000900_lock_down_api.sql`).
 
 ### Endpoints
 

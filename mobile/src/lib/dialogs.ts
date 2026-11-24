@@ -13,16 +13,6 @@ ${message}`);
   Alert.alert(title, message);
 }
 
-/** Placeholder for buttons whose feature is planned but not built yet. */
-export function comingSoon(feature: string) {
-  const message = `Coming in a future update: ${feature}.`;
-  if (Platform.OS === 'web') {
-    window.alert(`Coming soon\n\n${message}`);
-    return;
-  }
-  Alert.alert('Coming soon', message);
-}
-
 /** Runs a button's action and shows a message if it fails (instead of failing silently). */
 export function runOrWarn(failureTitle: string, action: () => Promise<void> | void): void {
   Promise.resolve()
@@ -52,4 +42,22 @@ export function confirmAction(
     { text: 'Cancel', style: 'cancel' },
     { text: actionLabel, style: 'destructive', onPress: run },
   ]);
+}
+
+/** Asks a yes/no question. Resolves to whether the student chose `actionLabel`. */
+export function askFirst(title: string, message: string, actionLabel: string, cancelLabel = 'Cancel'): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+  }
+  return new Promise((resolve) => {
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: cancelLabel, style: 'cancel', onPress: () => resolve(false) },
+        { text: actionLabel, style: 'destructive', onPress: () => resolve(true) },
+      ],
+      { cancelable: false },
+    );
+  });
 }

@@ -98,18 +98,16 @@ Format: `user —` is a user action, `app —` is the app's response.
 - app — show the class on Grades home [F02]
 - **Outcome:** The student tracks a class built entirely by hand.
 
-## Flow 8 — Turn on cloud sync (opt-in)
+## Flow 8 — Sync to a second device
 
-- **Start:** Settings, with grades already stored locally.
-- user — open "Cloud Sync (beta)"
-- user — enter the server URL, then create or sign in to an account
-- app — establish the session and store it locally [F14]
-- user — tap "Sync now"
-- app — push the local gradebook up and pull the latest down through the sync
-  service, keeping the local cache as the offline source of truth [F14][F13]
-- **Outcome:** The student's grades are backed up to their private account and can
-  be restored on another device. With sync off, nothing leaves the device.
-  (Beta: the service runs against an in-memory store, so treat as not-yet-durable.)
+- **Start:** A signed-in student with grades on the first phone.
+- user — install the app on the second device and sign in to the same account
+- app — keep the session in secure storage [F14]
+- app — download the gradebook and show it [F14][F13]
+- user — change a grade on either device
+- app — save it locally, push it, and update the other device [F14][F13]
+- **Outcome:** The same grades on both devices. Either one keeps working with no
+  internet and catches up later.
 
 ## Flow 9 — Switch to dark mode
 

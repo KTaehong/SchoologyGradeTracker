@@ -40,16 +40,17 @@ broke underneath.
 
 ## The journeys
 
-- `sign-in.e2e.ts` — the app starts signed out; bad emails are refused before
-  anything is sent; an existing email is named as such; the test account signs
-  in with its password; a double tap signs in once; reopening the app asks for
-  a sign-in again; Sign out cannot be undone with Back.
+- `sign-in.e2e.ts` — a new install starts signed out; bad emails are refused before
+  anything is sent; signing up does not reveal who has an account; the test
+  account signs in with its password; a double tap signs in once; reopening the
+  app goes straight to the grades, also with the server out of reach; Sign out
+  cannot be undone with Back.
 - `gradebook.e2e.ts` — add a class, category, assignment and forecast by hand,
   with the slips people make (empty names, "forty", 2/31, 9000 out of 100,
-  double taps); then delete the class. Also: sample grades cannot be added
+  double taps); ask what the next test needs, then delete the class. Also: sample grades cannot be added
   twice, and the app syncs by itself once the connection is back.
 - `calendar.e2e.ts` — link the Schoology calendar, see the items in Upcoming
-  and Home, update, sign in again (the link is remembered per account) and
+  and Home, update, open the app again (the link is still there) and
   disconnect. Schoology is not contacted: the test answers the link with a
   small calendar file.
 - `monkey.e2e.ts` — see below.

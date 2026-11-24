@@ -14,7 +14,8 @@ import type { Page } from '@playwright/test';
 
 import { answerDialogs, expect, hasAccount, signIn, test } from './support/app';
 
-const SEED = Number(process.env.MONKEY_SEED ?? Date.now() % 1_000_000);
+// Kept in the environment, so the test worker uses the same seed as the runner.
+const SEED = Number((process.env.MONKEY_SEED ??= String(Date.now() % 1_000_000)));
 const STEPS = Number(process.env.MONKEY_STEPS ?? 150);
 
 /** A small seeded random number generator (mulberry32), so runs can be replayed. */

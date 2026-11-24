@@ -7,7 +7,8 @@ import { Button, Row, Section, TextField } from '@/components/ui';
 import { useGradebook } from '@/data/gradebook-store';
 import type { FeedSaveResult } from '@/db/gradebook-repo';
 import { formatRefreshed } from '@/lib/calendar-label';
-import { confirmAction } from '@/lib/coming-soon';
+import { feedHost, isSchoologyHost, normalizeFeedUrl } from '@/import/calendar-feed';
+import { askFirst, confirmAction } from '@/lib/dialogs';
 import { useSave } from '@/lib/use-save';
 
 function resultLine(r: FeedSaveResult): string {
@@ -24,8 +25,19 @@ export default function CalendarFeedScreen() {
 
   const connect = () =>
     save(
-      () => connectCalendar(link),
+      async () => {
+        const url = normalizeFeedUrl(link);
+        const go =
+          isSchoologyHost(url) ||
+          (await askFirst(
+            'Is this your school’s calendar?',
+            `This link goes to ${feedHost(url)}, not schoology.com. Only continue if that is your school's own Schoology address.`,
+            'Continue',
+          ));
+        return go ? connectCalendar(link) : null;
+      },
       (r) => {
+        if (!r) return;
         // Stay here: the screen switches to the connected view and shows what was found.
         setLink('');
         setMessage(resultLine(r));
@@ -88,7 +100,7 @@ export default function CalendarFeedScreen() {
       />
       <ThemedText type="small" themeColor="textSecondary">
         The link works like a password: anyone with it can see your calendar. It stays on this phone, in
-        secure storage, and is only sent to Schoology.
+        secure storage, and is only sent to the address in it.
       </ThemedText>
       <KeepVisible>
         <FormError error={error} />

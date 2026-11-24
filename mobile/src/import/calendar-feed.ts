@@ -9,7 +9,8 @@
  * item's text. Items we cannot place show as "Unfiled".
  *
  * The link works like a password, so it is kept in the phone's secure storage
- * and only ever sent to Schoology.
+ * and only ever sent to the address in it (the screen asks first when that is
+ * not schoology.com).
  *
  * Parsing and matching are plain functions, tested in Jest.
  */
@@ -205,17 +206,56 @@ export function normalizeFeedUrl(input: string): string {
   return url.replace(/^http:\/\//i, 'https://');
 }
 
-type Fetch = (url: string, init?: { headers?: Record<string, string> }) => Promise<{
+/** Whether a (normalized) link goes to Schoology itself. Some schools use their own address. */
+export function isSchoologyHost(url: string): boolean {
+  const host = feedHost(url);
+  return host === 'schoology.com' || host.endsWith('.schoology.com');
+}
+
+/** The address a (normalized) link goes to, for example `app.schoology.com`. */
+export function feedHost(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/** Give up on a calendar that has not arrived by then. */
+export const FEED_TIMEOUT_MS = 20_000;
+
+type Fetch = (url: string, init?: { headers?: Record<string, string>; signal?: AbortSignal }) => Promise<{
   ok: boolean;
   status: number;
   text(): Promise<string>;
 }>;
 
 /** Downloads and reads the feed. Errors are worded for the student. */
-export async function fetchCalendar(url: string, fetchImpl: Fetch = fetch as unknown as Fetch): Promise<CalendarEvent[]> {
+export async function fetchCalendar(
+  url: string,
+  fetchImpl: Fetch = fetch as unknown as Fetch,
+  timeoutMs: number = FEED_TIMEOUT_MS,
+): Promise<CalendarEvent[]> {
+  // The timeout covers the whole download, also when fetch ignores the signal.
+  const abort = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const tooSlow = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new CalendarFeedError('Schoology took too long to answer. Try again later.'));
+      abort.abort();
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([download(url, fetchImpl, abort.signal), tooSlow]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function download(url: string, fetchImpl: Fetch, signal: AbortSignal): Promise<CalendarEvent[]> {
   let response;
   try {
-    response = await fetchImpl(url, { headers: { Accept: 'text/calendar' } });
+    response = await fetchImpl(url, { headers: { Accept: 'text/calendar' }, signal });
   } catch {
     throw new CalendarFeedError('Could not reach Schoology. Check your internet connection and try again.');
   }

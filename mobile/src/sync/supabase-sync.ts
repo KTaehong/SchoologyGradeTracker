@@ -6,14 +6,14 @@
 import { getSupabase } from '@/api/client';
 import type { RpcCaller } from '@/api/rpc';
 
-import type { ChangeSet, PullResult } from './changes';
+import type { ChangeSet, PullResult, PushResult } from './changes';
 import type { SyncTransport } from './sync-engine';
 
 export function createSupabaseTransport(call: RpcCaller): SyncTransport {
   return {
     pull: async (since) => (await call('pull_changes', { p_since: since })) as PullResult,
     push: async (changes: ChangeSet) =>
-      (await call('push_changes', { p_changes: changes })) as { revision: number },
+      (await call('push_changes', { p_changes: changes })) as PushResult,
   };
 }
 

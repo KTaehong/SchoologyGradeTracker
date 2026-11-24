@@ -9,16 +9,28 @@
  *
  * Syncs never overlap: asking for one while another runs queues exactly one
  * more, which picks up anything that changed in the meantime.
+ *
+ * An engine belongs to one account. A request can still be running when the
+ * student signs out or someone else signs in, so every read and write of the
+ * gradebook first checks, in the same transaction, that it is still that
+ * account's.
  */
 import { ApiError } from '@/api/errors';
 import { countPendingChanges, getMeta, setMeta } from '@/db/gradebook-repo';
 import type { SqlDb } from '@/db/sql';
 
-import { applyRemoteChanges, collectLocalChanges, markPushed, type ChangeSet, type PullResult } from './changes';
+import {
+  applyRemoteChanges,
+  collectLocalChanges,
+  markPushed,
+  type ChangeSet,
+  type PullResult,
+  type PushResult,
+} from './changes';
 
 export type SyncTransport = {
   pull(since: number): Promise<PullResult>;
-  push(changes: ChangeSet): Promise<{ revision: number }>;
+  push(changes: ChangeSet): Promise<PushResult>;
 };
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
@@ -32,11 +44,18 @@ export type SyncStatus = {
   error: string | null;
 };
 
+/** The account the phone's gradebook belongs to (see ./account.ts). */
+export const ACCOUNT_KEY = 'account_id';
 export const CURSOR_KEY = 'sync_cursor';
 export const LAST_SYNCED_KEY = 'last_synced_at';
 
+/** The sync was cut short because the engine was stopped or the account changed. */
+class StoppedError extends Error {}
+
 export type SyncEngineOptions = {
   db: SqlDb;
+  /** The account this engine syncs. It stops touching the gradebook once that changes. */
+  accountId?: string;
   transport: SyncTransport;
   /** Called after a pull changed rows on this phone, so screens can redraw. */
   onRemoteChange?: () => void;
@@ -54,6 +73,9 @@ export type SyncEngineOptions = {
 export class SyncEngine {
   private running: Promise<void> | null = null;
   private again = false;
+  private stopped = false;
+  /** True while a sync re-sends rows the server skipped, so it is tried only once. */
+  private resending = false;
   private status: SyncStatus = { state: 'idle', lastSyncedAt: null, pending: 0, error: null };
 
   constructor(private readonly options: SyncEngineOptions) {}
@@ -62,8 +84,25 @@ export class SyncEngine {
     return this.status;
   }
 
+  /** Ends this engine (sign-out, another account). A request still running changes nothing. */
+  stop(): void {
+    this.stopped = true;
+    this.again = false;
+  }
+
+  /** Throws unless the gradebook is still this engine's. Runs inside its transactions. */
+  private readonly check = async (): Promise<void> => {
+    const { db, accountId } = this.options;
+    if (this.stopped || (accountId !== undefined && (await getMeta(db, ACCOUNT_KEY)) !== accountId)) {
+      throw new StoppedError();
+    }
+  };
+
   /** Syncs now, or right after the sync already running. Never rejects. */
   sync(): Promise<void> {
+    if (this.stopped) {
+      return Promise.resolve();
+    }
     if (this.running) {
       this.again = true;
       return this.running;
@@ -95,6 +134,7 @@ export class SyncEngine {
   }
 
   private setStatus(patch: Partial<SyncStatus>) {
+    if (this.stopped) return;
     this.status = { ...this.status, ...patch };
     this.options.onStatus?.(this.status);
   }
@@ -104,26 +144,39 @@ export class SyncEngine {
     this.setStatus({ state: 'syncing', error: null });
     try {
       const cursor = Number((await getMeta(db, CURSOR_KEY)) ?? 0);
+      await this.check();
       const pulled = await transport.pull(cursor);
-      const applied = await applyRemoteChanges(db, pulled);
       // Our own pushes come back in the next pull; saving them again is harmless.
       // The cursor only moves to what was pulled, never to a push's revision,
       // so changes another device made between our pull and push are not skipped.
-      await setMeta(db, CURSOR_KEY, String(pulled.revision));
+      const applied = await applyRemoteChanges(db, pulled, this.check, () =>
+        setMeta(db, CURSOR_KEY, String(pulled.revision)),
+      );
       if (applied > 0) {
         this.options.onRemoteChange?.();
       }
 
-      const local = await collectLocalChanges(db);
+      const local = await collectLocalChanges(db, this.check);
       if (local) {
-        await transport.push(local.changes);
-        await markPushed(db, local.sent);
+        const { skipped } = await transport.push(local.changes);
+        const sendAgain = await markPushed(db, local.sent, skipped, this.check);
+        if (sendAgain && !this.resending) {
+          this.resending = true;
+          this.again = true;
+        } else {
+          this.resending = false;
+        }
       }
 
       const now = (this.options.now?.() ?? new Date()).toISOString();
-      await setMeta(db, LAST_SYNCED_KEY, now);
+      await db.transaction(async () => {
+        await this.check();
+        await setMeta(db, LAST_SYNCED_KEY, now);
+      });
       this.setStatus({ state: 'idle', lastSyncedAt: now, pending: await countPendingChanges(db) });
     } catch (error) {
+      if (error instanceof StoppedError) return;
+      this.resending = false;
       const offline = error instanceof ApiError && error.kind === 'network';
       this.setStatus({
         state: offline ? 'offline' : 'error',

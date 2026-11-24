@@ -5,8 +5,9 @@
  * These mirror the Supabase tables (supabase/migrations/*_gradebook.sql) so the
  * same rows can live on the phone (SQLite) and in the cloud.
  */
-import type { PeriodKind } from '@/api/grades';
 import type { GradingMode } from '@/data/types';
+
+import type { PeriodKind } from './grade-types';
 
 export type { GradingMode, PeriodKind };
 

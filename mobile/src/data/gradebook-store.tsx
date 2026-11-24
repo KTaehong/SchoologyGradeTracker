@@ -24,9 +24,9 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 
-import { getSession, signOut as apiSignOut } from '@/api/auth';
+import { signOut as apiSignOut } from '@/api/auth';
 import { getSupabase, isApiConfigured } from '@/api/client';
-import type { CourseGrades, NewForecast } from '@/api/grades';
+import type { CourseGrades, NewForecast } from '@/engine/grade-types';
 import { createRpcCaller } from '@/api/rpc';
 import { useSession } from '@/api/use-session';
 import {
@@ -34,6 +34,7 @@ import {
   addCategory,
   addCourse as addCourseRows,
   addForecast as addForecastRow,
+  countPendingChanges,
   deleteAssignment as deleteAssignmentRow,
   deleteCategory as deleteCategoryRow,
   deleteCourse as deleteCourseRow,
@@ -72,11 +73,12 @@ import {
   readCalendarLink,
   saveCalendarLink,
 } from '@/import/calendar-link';
-import { attachAccount, detachAccount } from '@/sync/account';
+import { askFirst } from '@/lib/dialogs';
+import { AccountSwitchCancelled, attachAccount, detachAccount } from '@/sync/account';
 import { onReconnect, useOnline } from '@/sync/connectivity';
 import { retryDelayMs } from '@/sync/retry';
 import { createSupabaseTransport, watchRemoteChanges } from '@/sync/supabase-sync';
-import { SyncEngine, type SyncStatus } from '@/sync/sync-engine';
+import { ACCOUNT_KEY, SyncEngine, type SyncStatus } from '@/sync/sync-engine';
 
 import { createSampleGradebook } from './sample-gradebook';
 import { removeLegacyGradebook } from './storage';
@@ -136,11 +138,25 @@ type GradebookContextValue = {
   deleteAssignment: (assignmentId: string) => Promise<void>;
   /** Pull-to-refresh: sync now. Resolves when done (never rejects). */
   syncNow: () => Promise<void>;
-  /** Signs out and removes this phone's copy of the account's grades. */
-  signOut: () => Promise<void>;
+  /**
+   * Signs out and removes this phone's copy of the account's grades. Rejects
+   * with UnsentChangesError when changes could not be sent first, unless
+   * `discardUnsent`.
+   */
+  signOut: (discardUnsent?: boolean) => Promise<void>;
   /** Permanently deletes the account and its cloud gradebook, then signs out. */
   deleteAccount: () => Promise<void>;
 };
+
+/** Signing out now would lose changes that are only on this phone. */
+export class UnsentChangesError extends Error {
+  constructor(readonly count: number) {
+    super(
+      `${count} ${count === 1 ? 'change has' : 'changes have'} not reached the cloud yet. Connect to the internet and try again.`,
+    );
+    this.name = 'UnsentChangesError';
+  }
+}
 
 const GradebookContext = createContext<GradebookContextValue | null>(null);
 
@@ -226,11 +242,23 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     }
     let stopped = false;
     // Nothing syncs until the gradebook belongs to this account (see `ready`).
-    const attached = attachAccount(db, userId);
+    const attached = attachAccount(db, userId, async (unsent) => {
+      const discard = await askFirst(
+        'Delete unsent changes?',
+        `Someone else used this phone, and ${unsent} of their changes never reached the cloud. If you continue, those changes are deleted. To keep them, cancel and let them sign in again first.`,
+        'Delete and continue',
+      );
+      return discard && !stopped;
+    });
+    attached.catch((e: unknown) => {
+      // Kept: the phone stays the other account's, so this one is signed out.
+      if (e instanceof AccountSwitchCancelled && !stopped) apiSignOut('local').catch(() => undefined);
+    });
     const engine = new SyncEngine({
       db,
+      accountId: userId,
       ready: attached,
-      transport: createSupabaseTransport(createRpcCaller(getSupabase)),
+      transport: createSupabaseTransport(createRpcCaller(getSupabase, userId)),
       onStatus: (status) => {
         if (!stopped) setSync(status);
       },
@@ -263,6 +291,7 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       stopped = true;
+      engine.stop();
       setShownAccount(null);
       setSync(null);
       stopRealtime();
@@ -291,13 +320,24 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [syncState]);
 
-  /** Reads the feed at `url` into the gradebook. */
-  const loadFeed = useCallback(async (database: SqlDb, url: string) => {
+  /** Moves on when the calendar is disconnected, so a download still running is dropped. */
+  const feedVersion = useRef(0);
+
+  /**
+   * Reads the feed at `url` into `account`'s gradebook. The download can take a
+   * while: if someone else signs in meanwhile, nothing is saved.
+   */
+  const loadFeed = useCallback(async (database: SqlDb, url: string, account: string) => {
+    const version = feedVersion.current;
     const events = await fetchCalendar(url);
     const items = toFeedItems(events, await readCourses(database));
-    const result = await saveFeedItems(database, newId, items, FEED_UID_PREFIX);
     const refreshedAt = new Date().toISOString();
-    await setMeta(database, CALENDAR_REFRESHED_KEY, refreshedAt);
+    const result = await saveFeedItems(database, newId, items, FEED_UID_PREFIX, async () => {
+      if (feedVersion.current !== version || (await getMeta(database, ACCOUNT_KEY)) !== account) {
+        throw new Error('The calendar was disconnected.');
+      }
+      await setMeta(database, CALENDAR_REFRESHED_KEY, refreshedAt);
+    });
     return { result, refreshedAt };
   }, []);
 
@@ -320,8 +360,9 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       if (!link || !stale) return;
       setCalendar((c) => ({ ...c, refreshing: true }));
       try {
-        const { refreshedAt: at } = await loadFeed(db, link);
-        if (!cancelled) setCalendar((c) => ({ ...c, refreshing: false, refreshedAt: at, error: null }));
+        const { refreshedAt: at } = await loadFeed(db, link, calendarAccount);
+        if (cancelled) return;
+        setCalendar((c) => ({ ...c, refreshing: false, refreshedAt: at, error: null }));
         await changedRef.current?.(db);
       } catch (e) {
         if (!cancelled) {
@@ -368,11 +409,11 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       await action(db);
       await changed(db);
     };
-    const refreshWith = async (url: string) => {
+    const refreshWith = async (url: string, account: string) => {
       if (!db) throw new Error('The gradebook is still opening. Try again in a moment.');
       setCalendar((c) => ({ ...c, refreshing: true }));
       try {
-        const { result, refreshedAt } = await loadFeed(db, url);
+        const { result, refreshedAt } = await loadFeed(db, url, account);
         setCalendar((c) => ({ ...c, connected: true, refreshing: false, refreshedAt, error: null }));
         await changed(db);
         return result;
@@ -395,16 +436,17 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
       connectCalendar: async (link) => {
         if (!calendarAccount) throw new Error('Your grades are still loading. Try again in a moment.');
         const url = normalizeFeedUrl(link);
-        const result = await refreshWith(url);
+        const result = await refreshWith(url, calendarAccount);
         await saveCalendarLink(calendarAccount, url);
         return result;
       },
       refreshCalendar: async () => {
         const url = calendarAccount ? await readCalendarLink(calendarAccount) : null;
-        if (!url) throw new Error('Connect your Schoology calendar in Settings first.');
-        return refreshWith(url);
+        if (!url || !calendarAccount) throw new Error('Connect your Schoology calendar in Settings first.');
+        return refreshWith(url, calendarAccount);
       },
       disconnectCalendar: async () => {
+        feedVersion.current++;
         if (calendarAccount) await forgetCalendarLink(calendarAccount);
         await edit(async (d) => {
           await removeFeedItems(d, FEED_UID_PREFIX);
@@ -457,17 +499,14 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         if (engineRef.current) await engineRef.current.sync();
         else if (db) await reload(db);
       },
-      signOut: async () => {
+      signOut: async (discardUnsent = false) => {
         // Last chance to send changes made here.
         if (engineRef.current) await engineRef.current.sync();
-        try {
-          await apiSignOut();
-        } catch (e) {
-          // With no connection the server cannot be told, but the phone
-          // still forgets the session. Only a session that is still here
-          // means the sign-out really failed.
-          if (await getSession().catch(() => null)) throw e;
+        if (db && !discardUnsent) {
+          const unsent = await countPendingChanges(db);
+          if (unsent > 0) throw new UnsentChangesError(unsent);
         }
+        await apiSignOut();
         if (db) {
           await detachAccount(db);
           await reload(db);

@@ -9,6 +9,7 @@ import {
   countPendingChanges,
   deleteCourse,
   eraseGradebook,
+  getMeta,
   insertCourses,
   insertUpcoming,
   readCourses,
@@ -23,8 +24,8 @@ import { computeCourseGrades } from '@/engine/grade-engine';
 import { FakeSyncServer } from '@/test-support/fake-sync-server';
 import { createTestDatabase } from '@/test-support/node-sqlite';
 
-import { attachAccount, attachedAccount, detachAccount } from '../account';
-import { SyncEngine, type SyncStatus } from '../sync-engine';
+import { AccountSwitchCancelled, attachAccount, detachAccount } from '../account';
+import { ACCOUNT_KEY, CURSOR_KEY, SyncEngine, type SyncStatus, type SyncTransport } from '../sync-engine';
 
 function uuids() {
   let n = 0;
@@ -327,12 +328,186 @@ describe('accounts', () => {
     const db = await createTestDatabase();
     await loadSample(db, 'manual');
     await attachAccount(db, 'ana');
-    expect(await attachAccount(db, 'ben')).toBe('switched');
+    expect(await attachAccount(db, 'ben', async () => true)).toBe('switched');
     expect(await readCourses(db)).toEqual([]);
 
     await loadSample(db, 'manual');
     await detachAccount(db);
     expect(await readCourses(db)).toEqual([]);
-    expect(await attachedAccount(db)).toBeNull();
+    expect(await getMeta(db, ACCOUNT_KEY)).toBeNull();
+  });
+});
+
+describe('switching accounts', () => {
+  it('asks before deleting the previous account’s unsent changes, and keeps them on "no"', async () => {
+    const db = await createTestDatabase();
+    await loadSample(db, 'manual');
+    await attachAccount(db, 'ana');
+    const unsent = await countPendingChanges(db);
+    const asked: number[] = [];
+    await expect(
+      attachAccount(db, 'ben', async (n) => {
+        asked.push(n);
+        return false;
+      }),
+    ).rejects.toBeInstanceOf(AccountSwitchCancelled);
+    expect(asked).toEqual([unsent]);
+    expect(await getMeta(db, ACCOUNT_KEY)).toBe('ana');
+    expect(await countPendingChanges(db)).toBe(unsent);
+  });
+
+  it('does not ask when everything was sent', async () => {
+    const phone = await device(new FakeSyncServer());
+    await loadSample(phone.db);
+    await attachAccount(phone.db, 'ana');
+    await phone.engine.sync();
+    const confirm = async () => {
+      throw new Error('asked');
+    };
+    expect(await attachAccount(phone.db, 'ben', confirm)).toBe('switched');
+  });
+
+  /** Ana's phone, with her pull held back until `release` is called. */
+  async function slowPull() {
+    const server = new FakeSyncServer();
+    const first = await device(server);
+    await loadSample(first.db);
+    await attachAccount(first.db, 'ana');
+    await first.engine.sync();
+
+    const db = await createTestDatabase();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const real = server.transport();
+    const transport: SyncTransport = {
+      pull: async (since) => {
+        const result = await real.pull(since);
+        await gate;
+        return result;
+      },
+      push: real.push,
+    };
+    await attachAccount(db, 'ana');
+    const engine = new SyncEngine({ db, accountId: 'ana', transport });
+    const syncing = engine.sync();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    return { server, db, engine, syncing, release };
+  }
+
+  it('a pull that returns after someone else signed in changes nothing', async () => {
+    const { server, db, syncing, release } = await slowPull();
+    const pushes = server.pushes;
+    await attachAccount(db, 'ben');
+    release();
+    await syncing;
+    expect(await readCourses(db)).toEqual([]);
+    expect(await getMeta(db, CURSOR_KEY)).toBeNull();
+    expect(server.pushes).toBe(pushes);
+  });
+
+  it('a stopped engine changes nothing and syncs no more', async () => {
+    const { server, db, engine, syncing, release } = await slowPull();
+    engine.stop();
+    release();
+    await syncing;
+    await engine.sync();
+    expect(await readCourses(db)).toEqual([]);
+    expect(server.pushes).toBe(1);
+  });
+});
+
+describe('an edit on one phone and a delete on another', () => {
+  async function twoPhones() {
+    const server = new FakeSyncServer();
+    const a = await device(server);
+    await loadSample(a.db);
+    await attachAccount(a.db, 'ana');
+    await a.engine.sync();
+    const b = await device(server);
+    await attachAccount(b.db, 'ana');
+    await b.engine.sync();
+    return { a, b };
+  }
+  const settle = async (a: Awaited<ReturnType<typeof device>>, b: Awaited<ReturnType<typeof device>>) => {
+    for (const phone of [a, b, a, b]) await phone.engine.sync();
+  };
+
+  it('keeps the score, and the whole class with it, on both phones', async () => {
+    const { a, b } = await twoPhones();
+    const before = (await readCourses(b.db))[0];
+    const { assignment } = await findAssignment(b.db, 'Quiz 2.2');
+    await setForecast(b.db, assignment.id, 7);
+    await deleteCourse(a.db, before.id);
+    await settle(a, b);
+    for (const phone of [a, b]) {
+      const after = (await readCourses(phone.db)).find((c) => c.id === before.id);
+      expect(after?.periods.flatMap((p) => p.categories.flatMap((c) => c.assignments)).length).toBe(
+        before.periods.flatMap((p) => p.categories.flatMap((c) => c.assignments)).length,
+      );
+      expect((await findAssignment(phone.db, 'Quiz 2.2')).assignment.forecastScore).toBe(7);
+      expect(await countPendingChanges(phone.db)).toBe(0);
+    }
+  });
+
+  it('a renamed class does not come back empty', async () => {
+    const { a, b } = await twoPhones();
+    const before = (await readCourses(b.db))[0];
+    await updateCourse(b.db, before.id, { name: 'Renamed', teacher: null, gradingMode: before.gradingMode });
+    await deleteCourse(a.db, before.id);
+    await settle(a, b);
+    for (const phone of [a, b]) {
+      const after = (await readCourses(phone.db)).find((c) => c.name === 'Renamed');
+      expect(after?.periods).toHaveLength(before.periods.length);
+      expect(computeCourseGrades(after!).current).toEqual(computeCourseGrades(before).current);
+    }
+  });
+
+  it('still deletes a class with no unsent edits, and leaves edits in other classes alone', async () => {
+    const { a, b } = await twoPhones();
+    const [first, second] = await readCourses(b.db);
+    await updateCourse(b.db, second.id, { name: 'Other', teacher: null, gradingMode: second.gradingMode });
+    await deleteCourse(a.db, first.id);
+    await settle(a, b);
+    for (const phone of [a, b]) {
+      const names = await titles(phone.db);
+      expect(names).toContain('Other');
+      expect(names).not.toContain(first.name);
+      expect(names).toHaveLength(4);
+    }
+  });
+});
+
+describe('rows the server skips', () => {
+  it('are sent again together with the parents the cloud is missing', async () => {
+    const server = new FakeSyncServer();
+    const phone = await device(server);
+    await loadSample(phone.db);
+    await attachAccount(phone.db, 'ana');
+    await phone.engine.sync();
+    const { course, assignment } = await findAssignment(phone.db, 'Quiz 2.2');
+    // Another device deletes the class between this phone's pull and its push.
+    for (const table of ['courses', 'grading_periods', 'categories', 'assignments'] as const) {
+      for (const [id] of server.rows.get(table)!) {
+        if (table !== 'courses' || id === course.id) server.rows.get(table)!.delete(id);
+      }
+    }
+    await setForecast(phone.db, assignment.id, 6);
+    await phone.engine.sync();
+    expect(server.rows.get('assignments')!.get(assignment.id)?.row.forecast_score).toBe(6);
+    expect(phone.engine.getStatus()).toMatchObject({ state: 'idle', pending: 0 });
+  });
+
+  it('are dropped when their parent is gone here too, so they never block a sync', async () => {
+    const server = new FakeSyncServer();
+    const phone = await device(server);
+    await attachAccount(phone.db, 'ana');
+    await phone.db.run(
+      "insert into categories (id, period_id, name, position, dirty) values ('k1', 'nowhere', 'Lost', 1, 1)",
+    );
+    await phone.engine.sync();
+    expect(await countPendingChanges(phone.db)).toBe(0);
+    expect(await phone.db.all('select id from categories')).toEqual([]);
   });
 });

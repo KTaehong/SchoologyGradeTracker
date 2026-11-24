@@ -2,13 +2,13 @@
 
 > **The MVP will allow a _student_ to _see accurate, up-to-date grades for their
 > own courses and project future outcomes_ by using _keyless grade import, an
-> on-device grade engine, what-if and final-grade tools, and an optional private
-> cloud account that syncs those grades across their own devices_.**
+> on-device grade engine, what-if and final-grade tools, and a private cloud
+> account that syncs those grades across their own devices_.**
 
 Product name: **Schoology Grade Tracker**. Primary
 MVP user: **student**. The cloud sync service is included so a student's grades
-survive a reinstall and follow them to a second device — it is opt-in and off by
-default.
+survive a reinstall and follow them to a second device. The app needs an account
+(decided in October 2026); once signed in, everything works with no internet.
 
 Each feature has a stable ID (`F01`…) used for cross-reference in
 [`features.md`](features.md) and [`user-flows.md`](user-flows.md).
@@ -17,7 +17,7 @@ Each feature has a stable ID (`F01`…) used for cross-reference in
 
 | ID | Name | What it does |
 |----|------|--------------|
-| **F01** | Onboarding | First-run, keyless "get started" — no login, password, or API key required to begin. |
+| **F01** | Onboarding | First run: create a private account or sign in (email, Google, Apple). No Schoology password or API key is ever needed. |
 | **F02** | Grades home | Main screen: the list of the student's courses, each with its current computed grade (percent + letter) or `N/A` when nothing is graded. |
 | **F03** | Course detail | A course's grading periods → categories/sections → assignments, with the overall course grade and each level's weighting. |
 | **F04** | Import from screenshot (OCR) | Take/pick a photo of a grades page; on-device OCR reads it and a cascade auto-sorts it into a class, then a category, falling back to a manual pick when it can't. Rows are confirmed/edited, then committed. |
@@ -29,8 +29,8 @@ Each feature has a stable ID (`F01`…) used for cross-reference in
 | **F10** | Semester (midterm/final) grades | Compute midterm = Q1+Q2+midterm exam and final = Q3+Q4+final exam; quarters count 50/50, the exam blends by weight (default 20%), present-weight normalized. Exam scores/weights are editable. |
 | **F11** | Upcoming assignments | Subscribe to the student's Schoology **iCal feed**; show an agenda of what's due, matched to the owning class where possible, tappable through to Schoology. |
 | **F12** | Theme / dark mode | Light and dark themes. |
-| **F13** | On-device persistence | All grades are stored locally (offline-first); the app works fully with no network and no account. |
-| **F14** | Opt-in cloud sync | Create or sign in to a private account and sync the gradebook up/down so it survives reinstalls and reaches a second device. Opt-in, off by default. |
+| **F13** | On-device persistence | All grades are stored locally (offline-first). A signed-in student stays signed in, and the app works fully with no network. |
+| **F14** | Cloud sync | The account keeps the gradebook in the cloud, so it survives reinstalls and reaches a second device. It syncs by itself while signed in. |
 
 ## Explicitly NOT in the MVP
 
@@ -46,8 +46,8 @@ is **not** wired into a shippable user experience; they are still out of MVP.
   account lookup, audit-log viewing. (Server admin API exists; there is no
   console UI, and this is an operator tool, not a student feature.)
 - **Managed cloud data tier** — provisioned PostgreSQL persistence, object
-  storage for uploaded screenshots/reports, and a cache. (The sync service runs
-  against an in-memory store today; the schema is written but not deployed.)
+  storage for uploaded screenshots/reports, and a cache. (Postgres itself is in:
+  sync runs on hosted Supabase.)
 - **End-to-end encryption of synced data** — a stated design goal for the cloud
   tier, not required to ship the MVP.
 - **Weighted photo-built classes** — classes created purely from screenshots use

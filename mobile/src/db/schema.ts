@@ -81,8 +81,6 @@ const MIGRATIONS: string[] = [
   `,
 ];
 
-export const SCHEMA_VERSION = MIGRATIONS.length;
-
 export async function migrate(db: SqlDb): Promise<void> {
   const [{ user_version: version }] = await db.all<{ user_version: number }>('pragma user_version');
   for (let v = version; v < MIGRATIONS.length; v++) {

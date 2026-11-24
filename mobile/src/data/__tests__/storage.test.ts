@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   loadThemePreference,
-  readLegacyGradebook,
   removeLegacyGradebook,
   saveThemePreference,
 } from '../storage';
@@ -29,19 +28,9 @@ describe('theme preference storage', () => {
 });
 
 describe('legacy JSON gradebook', () => {
-  it('is missing on a new install', async () => {
-    await expect(readLegacyGradebook()).resolves.toBe('missing');
-  });
-
-  it('remembers that the student had erased everything', async () => {
-    await AsyncStorage.setItem('gradebook.v1', JSON.stringify({ schemaVersion: 1, courses: [], upcoming: [] }));
-    await expect(readLegacyGradebook()).resolves.toBe('empty');
-  });
-
-  it('treats any other save (including damaged JSON) as present, then removes it', async () => {
-    await AsyncStorage.setItem('gradebook.v1', '{not json');
-    await expect(readLegacyGradebook()).resolves.toBe('present');
+  it('is removed', async () => {
+    await AsyncStorage.setItem('gradebook.v1', '{"courses": []}');
     await removeLegacyGradebook();
-    await expect(readLegacyGradebook()).resolves.toBe('missing');
+    await expect(AsyncStorage.getItem('gradebook.v1')).resolves.toBeNull();
   });
 });

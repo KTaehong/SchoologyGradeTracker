@@ -86,6 +86,15 @@ test.describe('typing in a class by hand', () => {
     await expect(text(page, /^Projected with forecasts:/)).toBeVisible();
     await expect(text(page, '95.00% · A').first()).toBeVisible();
 
+    // "What do I need?" answers for the ungraded test, and explains a bad target.
+    await button(page, /^What do I need/).click();
+    await expect(text(page, 'You need 90 out of 100 (90%) on Unit 2 Test to reach 90%.')).toBeVisible();
+    await field(page, /^Target grade/).fill('99');
+    await expect(text(page, /Even full points on Unit 2 Test do not reach 99%/)).toBeVisible();
+    await field(page, /^Target grade/).fill('an A');
+    await expect(text(page, /Enter the grade you want in percent/)).toBeVisible();
+    await page.goBack();
+
     // The class is on the Grades tab and on Home.
     await page.goBack();
     await expect(page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }).filter({ visible: true })).toHaveCount(1);

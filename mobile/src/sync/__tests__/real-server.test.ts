@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { createGradesApi } from '@/api/grades';
+import { createGradesApi } from '@/test-support/grades-api';
 import { createSampleGradebook } from '@/data/sample-gradebook';
 import {
   addAssignment,
@@ -29,6 +29,7 @@ import {
 } from '@/db/gradebook-repo';
 import type { SqlDb } from '@/db/sql';
 import { computeCourseGrades } from '@/engine/grade-engine';
+import type { GradeCourse } from '@/engine/types';
 import { FEED_UID_PREFIX } from '@/import/calendar-feed';
 import { parseReport, parseReportLines } from '@/import/report-parser';
 import { RealSyncServer } from '@/test-support/real-sync-server';
@@ -92,6 +93,64 @@ const grades = async (db: SqlDb) =>
 
 const fixture = readFileSync(join(__dirname, '..', '..', 'import', '__tests__', 'fixtures', 'saved-grades-report.html'), 'utf8');
 
+/** The same "random" numbers on every run (mulberry32), so a failure can be repeated. */
+function seededRandom(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** A course that mixes every grade rule: weights, drops, extra credit, exams, forecasts. */
+function randomCourse(random: () => number, index: number): GradeCourse {
+  const int = (max: number) => Math.floor(random() * (max + 1));
+  const maybe = (chance: number) => random() < chance;
+  const cents = (max: number) => Math.round(random() * max * 100) / 100;
+  const names = ['Q1', 'Q2', 'Midterm', 'Q3', 'Q4', 'Final'];
+  const weightedPeriods = maybe(0.4);
+  return {
+    id: randomUUID(),
+    name: `Course ${index}`,
+    teacher: null,
+    gradingMode: maybe(0.5) ? 'weighted' : 'points',
+    position: index,
+    periods: names.slice(0, 1 + int(names.length - 1)).map((name, p) => ({
+      id: randomUUID(),
+      name,
+      kind: /Midterm|Final/.test(name) ? ('semester_exam' as const) : ('quarter' as const),
+      semester: maybe(0.3) ? (p < 3 ? 1 : 2) : null,
+      weight: weightedPeriods && maybe(0.8) ? int(60) : null,
+      position: p,
+      categories: Array.from({ length: int(3) }, (_, c) => ({
+        id: randomUUID(),
+        name: `Category ${c}`,
+        weight: maybe(0.8) ? int(100) : null,
+        dropLowest: int(2),
+        position: c,
+        assignments: Array.from({ length: int(6) }, (_, n) => {
+          const extraCredit = maybe(0.15);
+          const maxScore = extraCredit && maybe(0.5) ? 0 : 1 + int(99);
+          return {
+            id: randomUUID(),
+            title: `Work ${n}`,
+            dueDate: null,
+            maxScore,
+            actualScore: maybe(0.7) ? cents(Math.max(maxScore, 5) * 1.1) : null,
+            forecastScore: maybe(0.4) ? cents(Math.max(maxScore, 5)) : null,
+            excused: maybe(0.1),
+            extraCredit,
+            isPlaceholder: false,
+            position: n,
+          };
+        }),
+      })),
+    })),
+  };
+}
+
 describeCloud('sync with the real server', () => {
   it('sends the sample gradebook to a second phone with the same grades the server computes', async () => {
     const student = await newStudent();
@@ -119,6 +178,43 @@ describeCloud('sync with the real server', () => {
       ]);
       expect(cloud.semesters).toEqual(phoneGrades.semesters);
     }
+  });
+
+  it('agrees with the server on random gradebooks', async () => {
+    const student = await newStudent();
+    const a = await phone(student);
+    const random = seededRandom(20261123);
+    const books = Array.from({ length: 40 }, (_, i) => randomCourse(random, i));
+    await insertCourses(a.db, books, 'manual');
+    await a.sync();
+
+    const snapshot = await createGradesApi(server.caller(student)).getGrades();
+    const byId = new Map(snapshot.courses.map((c) => [c.courseId, c]));
+    for (const course of await readCourses(a.db)) {
+      const { ungraded: _phoneUngraded, ...phoneGrades } = computeCourseGrades(course);
+      const { ungraded: _cloudUngraded, ...cloudGrades } = byId.get(course.id)!;
+      expect(cloudGrades).toEqual(phoneGrades);
+    }
+  });
+
+  it('keeps a whole class when one phone edits it and the other deletes it', async () => {
+    const student = await newStudent();
+    const a = await phone(student);
+    const b = await phone(student);
+    await insertCourses(a.db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await a.sync();
+    await b.sync();
+    const before = await grades(b.db);
+    const course = (await readCourses(b.db))[0];
+    const item = course.periods[0].categories[0].assignments[0];
+    await updateAssignment(b.db, item.id, { ...item, title: 'Regraded' });
+    await deleteCourse(a.db, course.id);
+    await a.sync();
+    await b.sync();
+    await a.sync();
+    await b.sync();
+    expect(await grades(a.db)).toEqual(before);
+    expect(await grades(b.db)).toEqual(before);
   });
 
   it('syncs a saved-report import', async () => {

@@ -26,7 +26,7 @@ import type {
   PeriodGrades,
   SemesterGrades,
   UngradedAssignment,
-} from '@/api/grades';
+} from './grade-types';
 
 import type { GradeAssignment, GradeCategory, GradeCourse, GradePeriod } from './types';
 

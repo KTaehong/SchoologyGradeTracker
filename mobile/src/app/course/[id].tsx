@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import type { CourseGrades, PeriodGrades, UngradedAssignment } from '@/api';
+import type { CourseGrades, PeriodGrades, UngradedAssignment } from '@/engine/grade-types';
 import { EmptyState } from '@/components/empty-state';
 import { HeaderButton } from '@/components/header-button';
 import { Loading } from '@/components/loading';
@@ -237,6 +237,13 @@ function ForecastSection({ course }: { course: CourseGrades }) {
           }
         />
       ))}
+      <Row
+        label="What do I need?"
+        detail="The score you need on a final, or any other work, to reach a grade."
+        onPress={() =>
+          router.push({ pathname: '/final-grade', params: { courseId: course.courseId } })
+        }
+      />
       <Row
         label="+ Forecast new work"
         detail="For a test or assignment that isn't in Schoology yet."
