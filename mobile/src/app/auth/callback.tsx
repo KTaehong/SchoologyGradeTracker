@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 import { errorMessage, finishAuthLink } from '@/api';
 import { Loading } from '@/components/loading';
-import { showMessage } from '@/lib/coming-soon';
+import { showMessage } from '@/lib/dialogs';
 
 /**
  * Where sign-in links send the student back (`gradetracker://auth/callback`).

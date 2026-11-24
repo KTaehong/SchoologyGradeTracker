@@ -73,32 +73,31 @@ npm run test:monkey # random taps and junk typing
 
 ## Layout
 
-- `src/app/` — screens. `sign-in.tsx` is the first screen at every launch
-  (the app needs an account, and does not stay signed in). `(tabs)/` holds the four tabs: `index.tsx`
+- `src/app/` — screens. `sign-in.tsx` is the first screen until someone signs in
+  (the app needs an account, and stays signed in until Sign out). `(tabs)/` holds the four tabs: `index.tsx`
   (Home, the landing page), `grades.tsx`, `upcoming.tsx`, `settings.tsx`.
   `course/[id].tsx` is a course's detail screen with its forecasts,
-  `forecast.tsx` adds, changes, or removes a forecast, and `add.tsx` is the
+  `forecast.tsx` adds, changes, or removes a forecast, `final-grade.tsx` answers
+  "what do I need on the final?", and `add.tsx` is the
   *Add grades* sheet. `sign-in.tsx` signs in or creates an account;
-  `auth/callback.tsx` is where Google / Apple / Microsoft sign-in returns.
-  `_layout.tsx` files wire up navigation, the theme, and the first-run check.
+  `auth/callback.tsx` is where Google sign-in and emailed links return.
+  `_layout.tsx` files wire up navigation, the theme, and the sign-in check.
 - `src/components/` — shared UI pieces.
-- `src/lib/coming-soon.ts` — buttons for features that aren't built yet show a
-  "Coming soon" message.
+- `src/lib/dialogs.ts` — messages and "are you sure?" questions.
 - `src/engine/` — the grade engine (same rules as the server's SQL engine).
 - `src/db/` — the gradebook in SQLite on the phone.
 - `src/sync/` — cloud sync: pull/push, Realtime, connectivity, accounts. How it
   works: [`docs/sync.md`](../docs/sync.md).
 - `src/data/` — `gradebook-store.tsx` is what every screen reads (local data,
-  computed grades, sync status); `sample-gradebook.ts` is the sample. On first
-  launch the app starts with the sample; *Settings → Data* can add it again or
-  erase everything.
-- `src/test-support/` — test helpers: an in-memory SQLite and a fake sync server.
+  computed grades, sync status); `sample-gradebook.ts` is the sample,
+  which *Settings → Data* can add (a new account starts empty).
+- `src/test-support/` — test helpers: an in-memory SQLite, a fake sync server, the
+  real database in PGlite, and a client for the server's grade API.
 - `src/api/` — the cloud API. `client.ts` makes the one Supabase client, which
   keeps the sign-in session in secure storage and sends the token with every
-  request; `auth.ts` signs in and out (email, Google, Apple, Microsoft);
-  `grades.ts` is the grade engine API (grades snapshot, add/set/remove
-  forecasts, load sample grades); `use-session.ts` is a hook for the sign-in
-  state and `use-api-query.ts` loads API data when a screen opens.
+  request; `auth.ts` signs in and out (email, Google, Apple);
+  `stored-session.ts` reads who is signed in without the network; `rpc.ts` calls
+  the server; `use-session.ts` is a hook for the sign-in state.
 - `src/lib/forecast-form.ts` checks the forecast form; `format-grade.ts`
   formats percents and points.
 - `src/theme/` — colors and the light/dark/system theme setting.

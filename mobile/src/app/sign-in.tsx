@@ -140,7 +140,7 @@ export default function SignInScreen() {
         setPassword('');
         setUnconfirmed(address);
         setNotice(
-          `We sent a link to ${address}. Open it on this phone to confirm your account, then sign in here. No email? Check spam, or send it again below.`,
+          `Check ${address} for a link and open it on this phone to confirm your account, then sign in here. No email? Check spam, or send it again below. If you already have an account, no email is sent: just sign in.`,
         );
       }
     });

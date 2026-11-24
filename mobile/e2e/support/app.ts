@@ -70,7 +70,7 @@ export async function openTab(page: Page, name: 'Home' | 'Grades' | 'Upcoming' |
   await page.getByRole('tab', { name }).or(page.getByRole('link', { name })).first().click();
 }
 
-/** Opens the app. Every launch must start on the sign-in screen. */
+/** Opens the app signed out (each test gets its own empty browser). */
 export async function launch(page: Page) {
   await page.goto('/');
   await expect(button(page, 'Sign in')).toBeVisible({ timeout: 60_000 });

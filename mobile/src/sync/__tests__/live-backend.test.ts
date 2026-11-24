@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { runInThisContext } from 'node:vm';
 
-import { createGradesApi } from '@/api/grades';
+import { createGradesApi } from '@/test-support/grades-api';
 import { createRpcCaller, type RpcCaller } from '@/api/rpc';
 import { createSampleGradebook } from '@/data/sample-gradebook';
 import { addCourse, insertCourses, insertUpcoming, readCourses, readUpcoming, updateAssignment } from '@/db/gradebook-repo';

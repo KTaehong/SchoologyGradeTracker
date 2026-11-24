@@ -17,14 +17,19 @@ export function useSession(): SessionState {
 
   useEffect(() => {
     let cancelled = false;
+    // Listen first: an event is always newer than the saved session read below.
+    let heard = false;
+    const unsubscribe = onSessionChange((session) => {
+      heard = true;
+      if (!cancelled) setState(toState(session));
+    });
     getSession()
       .catch(() => null)
       .then((session) => {
-        if (!cancelled) {
+        if (!cancelled && !heard) {
           setState(toState(session));
         }
       });
-    const unsubscribe = onSessionChange((session) => setState(toState(session)));
     return () => {
       cancelled = true;
       unsubscribe();

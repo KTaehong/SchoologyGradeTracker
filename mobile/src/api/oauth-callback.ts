@@ -1,5 +1,5 @@
 /**
- * Reads the link Supabase sends back after Google / Apple / Microsoft sign-in,
+ * Reads the link Supabase sends back after Google sign-in,
  * for example `gradetracker://auth/callback?code=…`.
  *
  * With the PKCE flow the link carries a one-time `code`; on failure it carries

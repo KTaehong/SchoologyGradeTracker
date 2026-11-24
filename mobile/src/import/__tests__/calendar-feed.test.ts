@@ -4,6 +4,7 @@ import type { GradeCourse } from '@/engine/types';
 import {
   CalendarFeedError,
   fetchCalendar,
+  isSchoologyHost,
   matchEventCourse,
   normalizeFeedUrl,
   parseIcal,
@@ -171,7 +172,24 @@ describe('normalizeFeedUrl', () => {
   });
 });
 
+describe('isSchoologyHost', () => {
+  it('knows Schoology from other addresses', () => {
+    expect(isSchoologyHost('https://app.schoology.com/calendar/feed')).toBe(true);
+    expect(isSchoologyHost('https://schoology.com/x')).toBe(true);
+    for (const url of ['https://schoology.com.evil.test/x', 'https://notschoology.com/x', 'https://school.test/x', 'nope']) {
+      expect(isSchoologyHost(url)).toBe(false);
+    }
+  });
+});
+
 describe('fetchCalendar', () => {
+  it('gives up on a server that never answers, or never finishes', async () => {
+    const never = () => new Promise<never>(() => undefined);
+    await expect(fetchCalendar('https://x.test/f', never, 5)).rejects.toThrow(/too long/);
+    const stuck = async () => ({ ok: true, status: 200, text: never });
+    await expect(fetchCalendar('https://x.test/f', stuck, 5)).rejects.toThrow(/too long/);
+  });
+
   const reply = (status: number, body: string) => async () => ({
     ok: status >= 200 && status < 300,
     status,

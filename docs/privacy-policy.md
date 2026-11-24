@@ -1,6 +1,6 @@
 # Privacy Policy — Schoology Grade Tracker
 
-_Last updated: November 12, 2026_
+_Last updated: November 23, 2026_
 
 Schoology Grade Tracker ("the app") helps students see and forecast their own
 grades. This policy says what the app stores and where. The same text is in the
@@ -13,7 +13,8 @@ store your name, email address, username and gradebook (classes, categories,
 assignments, scores, forecasts and upcoming work) on our server, which runs on
 Supabase. This lets your grades sync to your other devices. Each account can
 only read its own data. A copy is kept on your phone so the app keeps working
-without internet; signing out removes that copy.
+without internet; signing out removes that copy. You stay signed in on your
+phone until you sign out.
 
 ## Screenshots and saved reports
 
@@ -23,8 +24,8 @@ files are never uploaded; only the grades you choose to save are kept.
 ## Schoology calendar link
 
 Your calendar link works like a password. It is kept in your phone's secure
-storage and is only ever sent to Schoology, to read your calendar. It is not
-stored on our server.
+storage and is only ever sent to the address in it (Schoology, or your school's
+own Schoology address), to read your calendar. It is not stored on our server.
 
 ## What we never do
 

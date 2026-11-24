@@ -10,7 +10,7 @@ import { Loading } from '@/components/loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, TextField } from '@/components/ui';
-import { showMessage } from '@/lib/coming-soon';
+import { showMessage } from '@/lib/dialogs';
 import { checkNewPassword } from '@/lib/password-form';
 import { accountLabel } from '@/lib/sign-in-form';
 import { Spacing } from '@/theme/colors';

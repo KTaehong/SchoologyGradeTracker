@@ -23,9 +23,9 @@ optimized build without the dev menu: `npx expo run:ios --configuration Release`
 Do not use Expo Go for a demo: screenshot import and Sign in with Apple need
 this app's own build.
 
-**Expected result:** the sign-in screen opens, at every launch: the app cannot
-be used without an account, and it does not stay signed in after it is closed
-(or after five minutes in the background).
+**Expected result:** on a new install the sign-in screen opens: the app cannot
+be used without an account. After that the student stays signed in until they
+sign out, so the app opens straight to their grades, also with no internet.
 Sign in with a demo username (`maya_torres`, `jordan_brooks` or `sam_nguyen`,
 made by `supabase/demo_accounts.sql`) or an email (the same script lets
 `ben.ortiz@example.com` and the other seed students sign in); "Create an account" makes a
@@ -74,21 +74,26 @@ signed-in tests are skipped. See `mobile/e2e/README.md`.
 network; it needs a throwaway confirmed account in `LIVE_TEST_EMAIL` /
 `LIVE_TEST_PASSWORD` and deletes that account at the end.
 
-`npm test` runs the app tests and then the sync code against every migration in
-`supabase/migrations/` in an in-memory Postgres (PGlite), so no database setup
-is needed. `npx expo-doctor` checks the Expo project.
+`npm test` runs the app tests, then the sync code and the SQL tests in
+`supabase/tests/` against every migration in an in-memory Postgres (PGlite), so
+no database setup is needed. GitHub runs the same checks on every pull request
+(`.github/workflows/checks.yml`). `npx expo-doctor` checks the Expo project.
 
 ## Rules
 
 - Only the Supabase URL and the **publishable** key belong in the repository
   (`mobile/.env`). Never add the secret / service_role key or the database
   password anywhere.
-- Every table has row-level security; every API function is closed to signed-out
-  callers. A new table or function needs both, plus a test in `supabase/tests/`.
+- Every table has row-level security, and signed-out callers (`anon`) have no
+  access to any table, view or function. A migration that adds a function must
+  revoke execute from `public, anon`; `supabase/tests/api_security_test.sql`
+  fails if one is missed. A new table or function also needs its own test.
 - Database changes are new files in `supabase/migrations/` (never edit an
   applied one), and must also be applied to the live project.
 - The grade rules exist twice and must agree: `mobile/src/engine/` (on the
-  phone) and `supabase/migrations/*grade_engine.sql` (on the server).
+  phone, what the app shows) and `supabase/migrations/*grade_engine.sql` (on the
+  server, not used by any screen). `npm run test:cloud` compares them on random
+  gradebooks.
 - `ios/` and `android/` are generated (git-ignored). Change `app.json`, not them.
 - Changes reach `main` through a new branch and a pull request.
 

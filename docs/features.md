@@ -8,16 +8,16 @@ goes through; "Edge cases" lists conditions the app must handle.
 
 ## F01 — Onboarding
 
-- **User goal:** Start using the app immediately, without creating an account or
-  entering any credential.
+- **User goal:** Start using the app quickly, without handing over a Schoology
+  password.
 - **Expected behavior:**
-  1. On first launch the app shows a short "get started" screen (no login, no
-     password, no API key).
-  2. The user continues to the (empty) Grades home.
-  3. The user can load a sample gradebook to explore, or go straight to importing
-     their own grades.
-- **Edge cases:** Onboarding shows only on first run; subsequent launches open
-  directly to Grades home. Nothing here requires a network connection.
+  1. On a new install the app shows the sign-in screen: sign in, or create an
+     account with email, Google or Apple (Apple on iPhone only).
+  2. The student lands on Home. An empty account offers ways to add classes.
+  3. The student can load sample grades to explore (Settings → Data), or import
+     their own.
+- **Edge cases:** The student stays signed in, so later launches open directly to
+  Home, also with no network. Creating an account needs a network connection.
 
 ## F02 — Grades home
 
@@ -167,25 +167,23 @@ goes through; "Edge cases" lists conditions the app must handle.
 
 ## F13 — On-device persistence
 
-- **User goal:** Keep my grades between launches, offline, with no account.
-- **Expected behavior:** All imported/manual grades, exam data, theme, and the
-  feed URL are saved locally and reloaded on launch.
-- **Edge cases:** The app is fully usable with no network and no account; local
-  data is the source of truth until cloud sync (F14) is enabled.
+- **User goal:** Keep my grades between launches, and see them offline.
+- **Expected behavior:** All imported/manual grades, exam data and the theme are
+  saved on the phone (SQLite) and shown at launch. The sign-in session and the
+  calendar link are in the Keychain / Keystore.
+- **Edge cases:** Once signed in, the app is fully usable with no network, also
+  after the access token has expired. The local data is what the screens show;
+  the cloud is a copy (F14). The database file is protected by the phone's own
+  app sandbox and is not encrypted separately.
 
-## F14 — Opt-in cloud sync
+## F14 — Cloud sync
 
 - **User goal:** Keep my grades across a reinstall and on a second device.
 - **Expected behavior:**
-  1. In **Settings → Cloud Sync (beta)** the user enters the server URL and
-     creates or signs in to a private account.
-  2. "Sync now" pushes the local gradebook up and pulls the latest down through
-     the sync service.
-  3. Sync is opt-in and off by default; the local cache (F13) remains the
-     offline source of truth.
-- **Edge cases:** With sync off, nothing leaves the device. The service never
-  receives a Schoology credential (only the app account's email/password).
-  **Status:** the service runs against an in-memory store today, so cloud data is
-  not yet durably hosted — treat sync as beta. Session tokens are stored in
-  `shared_preferences` for the beta and are slated to move to the Keychain/
-  Keystore before general release.
+  1. Signing in joins the phone's gradebook to the student's account.
+  2. Changes sync by themselves; Settings → Sync now does it on request.
+  3. Signing out sends unsent changes first, then removes this phone's copy.
+- **Edge cases:** When changes cannot be sent, signing out asks before losing
+  them. Signing in as someone else asks before deleting the previous account's
+  unsent changes. The service never receives a Schoology credential. How it
+  works: [`sync.md`](sync.md).

@@ -9,7 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, TextField } from '@/components/ui';
 import { useCourse, useGradebook } from '@/data/gradebook-store';
 import type { GradeCategory, GradeCourse, GradePeriod } from '@/engine/types';
-import { confirmAction } from '@/lib/coming-soon';
+import { confirmAction } from '@/lib/dialogs';
 import { numberText, validateCategory } from '@/lib/gradebook-form';
 import { useSave } from '@/lib/use-save';
 

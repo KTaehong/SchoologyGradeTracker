@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { CourseGrades } from '@/api';
+import type { CourseGrades } from '@/engine/grade-types';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { formatGrade } from '@/lib/format-grade';

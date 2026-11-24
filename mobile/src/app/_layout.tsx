@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { useSession } from '@/api';
+import { Loading } from '@/components/loading';
 import { GradebookProvider } from '@/data/gradebook-store';
 import { ThemePreferenceProvider, useResolvedColorScheme } from '@/theme/theme-preference';
 
@@ -17,9 +18,17 @@ export default function RootLayout() {
 
 function ThemedNavigation() {
   const scheme = useResolvedColorScheme();
-  // The app is only for a signed-in student. Signed out (at every launch, and
-  // after Sign out) the router shows the sign-in screen instead.
-  const signedIn = useSession().status === 'signed_in';
+  // The app is only for a signed-in student. Signed out, the router shows the
+  // sign-in screen instead. The session stays on the phone, so a signed-in
+  // student gets straight to their grades, also with no internet.
+  const session = useSession();
+  const signedIn = session.status === 'signed_in';
+
+  // Reading the saved session takes a moment. Wait, so a link into the app is
+  // not sent to the sign-in screen.
+  if (session.status === 'loading') {
+    return <Loading />;
+  }
 
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -38,6 +47,7 @@ function ThemedNavigation() {
           <Stack.Screen name="import-report" options={{ title: 'Import a saved report' }} />
           <Stack.Screen name="calendar-feed" options={{ title: 'Schoology calendar', presentation: 'modal' }} />
           <Stack.Screen name="forecast" options={{ title: 'Forecast', presentation: 'modal' }} />
+          <Stack.Screen name="final-grade" options={{ title: 'Grade calculator', presentation: 'modal' }} />
           <Stack.Screen name="course-form" options={{ title: 'Class', presentation: 'modal' }} />
           <Stack.Screen name="category-form" options={{ title: 'Category', presentation: 'modal' }} />
           <Stack.Screen name="assignment-form" options={{ title: 'Assignment', presentation: 'modal' }} />

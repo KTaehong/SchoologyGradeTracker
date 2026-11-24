@@ -13,7 +13,7 @@ import { join } from 'node:path';
 
 import { ApiError, toApiError } from '@/api/errors';
 import type { RpcCaller } from '@/api/rpc';
-import type { ChangeSet, PullResult } from '@/sync/changes';
+import type { ChangeSet, PullResult, PushResult } from '@/sync/changes';
 import type { SyncTransport } from '@/sync/sync-engine';
 
 const SUPABASE_DIR = join(__dirname, '..', '..', '..', 'supabase');
@@ -94,13 +94,23 @@ export class RealSyncServer {
     return {
       pull: async (since) => (await this.rpc(studentId, 'pull_changes', { p_since: since })) as PullResult,
       push: async (changes: ChangeSet) =>
-        (await this.rpc(studentId, 'push_changes', { p_changes: changes })) as { revision: number },
+        (await this.rpc(studentId, 'push_changes', { p_changes: changes })) as PushResult,
     };
   }
 
   /** A plain query with no row-level security (to check what the cloud holds). */
   async query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
     return (await this.pg.query<T>(sql, params)).rows;
+  }
+
+  /** Runs a whole SQL test file as the database owner. A failed check throws. */
+  async script(sql: string): Promise<void> {
+    try {
+      await this.pg.exec(sql);
+    } catch (e) {
+      await this.pg.exec('rollback').catch(() => undefined);
+      throw e;
+    }
   }
 
   close(): Promise<void> {

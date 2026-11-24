@@ -183,6 +183,28 @@ describe('saveScreenshotRows', () => {
     ]);
   });
 
+  it('keeps a saved score when the new row has none, and keeps two rows of one name apart', async () => {
+    await importCourses(db, report('Biology: P3', '45 / 50'), []);
+    const tests = (await readCourses(db))[0].periods[0].categories[0];
+    const row = { categoryId: tests.id, dueDate: null, maxScore: 50, excused: false };
+    await saveScreenshotRows(db, newId, [
+      { ...row, title: 'Unit Test', actualScore: null },
+      { ...row, title: 'Quiz', actualScore: 10 },
+      { ...row, title: 'Quiz', actualScore: 20 },
+    ]);
+    const again = await saveScreenshotRows(db, newId, [
+      { ...row, title: 'Quiz', actualScore: 10 },
+      { ...row, title: 'Quiz', actualScore: 25 },
+    ]);
+    expect(again).toEqual({ added: 0, updated: 2 });
+    const rows = (await readCourses(db))[0].periods[0].categories[0].assignments;
+    expect(rows.map((a) => [a.title, a.actualScore])).toEqual([
+      ['Unit Test', 45],
+      ['Quiz', 10],
+      ['Quiz', 25],
+    ]);
+  });
+
   it('saves nothing when a category is gone', async () => {
     await expect(
       saveScreenshotRows(db, newId, [

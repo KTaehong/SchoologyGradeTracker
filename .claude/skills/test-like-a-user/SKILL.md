@@ -37,8 +37,8 @@ Act like a student who is in a hurry and not careful:
 - Leave required boxes empty. Type words where numbers go, 9000 where 90
   goes, `2/31` as a date, an emoji, 400 letters, leading spaces.
 - Go offline (`context.setOffline(true)`), change something, come back.
-- Reload the page (that is "closing and reopening the app": it must ask for a
-  sign-in again).
+- Reload the page (that is "closing and reopening the app": it must
+  open straight to the grades, also with the server out of reach).
 - Open a link that does not exist. Open an inner screen while signed out.
 - Try both themes and a narrow screen (320 px wide).
 
@@ -67,8 +67,8 @@ add an `accessibilityLabel` in the app instead of a CSS selector.
 ## 5. What the browser cannot show
 
 Phone-only behaviour needs a simulator or phone: the keyboard covering a
-button, Sign in with Apple, reading a screenshot, secure storage, signing out
-after five minutes in the background. Say plainly that these were not checked.
+button, Sign in with Apple, reading a screenshot, secure storage, staying
+signed in after the app is closed. Say plainly that these were not checked.
 On a Mac with a simulator, `npx expo run:ios` and check them by hand against
 `docs/device-testing.md`.
 

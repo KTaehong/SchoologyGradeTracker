@@ -2,7 +2,7 @@
  * Checks the forecast form before anything is sent to the server, so the
  * student sees a clear message right away.
  */
-import type { NewForecast } from '@/api/grades';
+import type { NewForecast } from '@/engine/grade-types';
 import { MAX_SCORE, NAME_LIMITS } from '@/sync/server-limits';
 
 import { DUE_DATE_ERROR, parseDueDate } from './due-date';

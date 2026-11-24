@@ -1,5 +1,5 @@
 /**
- * Sign-in for opt-in cloud sync (F14). Supabase Auth owns passwords and tokens;
+ * Sign-in (F14). Supabase Auth owns passwords and tokens;
  * the session it returns is saved in secure storage by the client in ./client.ts
  * and sent with every API call automatically.
  */
@@ -9,7 +9,7 @@ import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
-import { getSupabase, isApiConfigured } from './client';
+import { getSupabase, isApiConfigured, readStoredSession } from './client';
 import { ApiError } from './errors';
 import { parseOAuthCallback } from './oauth-callback';
 
@@ -47,7 +47,9 @@ export type SignUp = {
 /**
  * Creates the account. The database trigger makes the profile from
  * `full_name` / `username`. Resolves to `null` when the project requires the
- * student to confirm their email before the first sign-in.
+ * student to confirm their email before the first sign-in. An email that
+ * already has an account gets the same answer (and no email), so this never
+ * reveals who has one.
  */
 export async function signUpWithEmail({
   email,
@@ -67,15 +69,6 @@ export async function signUpWithEmail({
   if (error) {
     throw toAuthApiError(error);
   }
-  // An email that already has an account gets a stand-in user with no logins
-  // (so the reply does not reveal who has an account) and no email is sent.
-  if (!data.session && data.user && data.user.identities?.length === 0) {
-    throw new ApiError(
-      'invalid_input',
-      'An account with this email already exists.',
-      'user_already_exists',
-    );
-  }
   return data.session;
 }
 
@@ -93,8 +86,8 @@ export async function resendConfirmation(email: string): Promise<void> {
 
 let browserSignInActive = false;
 
-/** Sign-in providers, by their Supabase names ('azure' is Microsoft). */
-export type OAuthProvider = 'google' | 'apple' | 'azure';
+/** Browser sign-in providers that are turned on in Supabase, by their Supabase names. */
+export type OAuthProvider = 'google';
 
 /** Where the provider sends the student back: `gradetracker://auth/callback` in a build. */
 export function oauthRedirectUrl(): string {
@@ -102,7 +95,7 @@ export function oauthRedirectUrl(): string {
 }
 
 /**
- * Signs in with Google, Apple, or Microsoft in a secure in-app browser.
+ * Signs in with Google in a secure in-app browser. (Apple: see signInWithApple.)
  * Resolves to `null` if the student closes the browser without finishing.
  *
  * Each provider must be turned on in Supabase (Authentication → Sign In /
@@ -118,8 +111,6 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<Sessi
     options: {
       redirectTo,
       skipBrowserRedirect: true,
-      // Microsoft only shares the email address when asked for it.
-      scopes: provider === 'azure' ? 'email' : undefined,
     },
   });
   if (error) {
@@ -196,9 +187,23 @@ export async function signInWithApple(): Promise<Session | null> {
     .join(' ')
     .slice(0, 100);
   if (fullName) {
-    await supabase.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
+    await saveFullName(data.user.id, fullName);
   }
   return data.session;
+}
+
+/** Saves the name Apple shares only once, trying again if the first try fails. */
+async function saveFullName(userId: string, fullName: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    const { error } = await getSupabase().from('profiles').update({ full_name: fullName }).eq('id', userId);
+    if (!error) return;
+    if (attempt === 3) {
+      // Not worth failing the sign-in: the profile keeps the name "Student".
+      console.warn(`Could not save the name from Sign in with Apple: ${error.message}`);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+  }
 }
 
 /**
@@ -284,31 +289,54 @@ async function exchangeLinkCode(code: string): Promise<AuthLinkResult> {
   }
 }
 
-/** Signs out and deletes the saved session from secure storage. */
-export async function signOut(): Promise<void> {
+/**
+ * Signs out and deletes the saved session from secure storage. When the server
+ * cannot be reached (or refuses), the session is still removed from this phone;
+ * it then ends on the server when its tokens expire or are replaced.
+ * `local` signs out only this phone; `global` ends the account's other sessions too.
+ */
+export async function signOut(scope: 'global' | 'local' = 'global'): Promise<void> {
   if (!isApiConfigured()) {
     return;
   }
-  const { error } = await getSupabase().auth.signOut();
-  if (error) {
+  const { error } = await getSupabase().auth.signOut({ scope });
+  if (!error) {
+    return;
+  }
+  await getSupabase().auth.signOut({ scope: 'local' });
+  if (await readStoredSession()) {
     throw toAuthApiError(error);
   }
 }
 
-/** The saved session (refreshed if it had expired), or `null` when signed out. */
+/**
+ * Who is signed in on this phone, or `null`. Works with no internet, also when
+ * the access token has expired: supabase-js refreshes it once it can, and
+ * `onSessionChange` reports it if the server ends the session.
+ */
 export async function getSession(): Promise<Session | null> {
   if (!isApiConfigured()) {
     return null;
   }
-  const { data } = await getSupabase().auth.getSession();
-  return data.session;
+  getSupabase(); // starts supabase-js, which refreshes the session
+  return readStoredSession();
 }
 
-/** Calls `listener` whenever the student signs in, signs out, or the token refreshes. */
+/**
+ * Calls `listener` whenever the student signs in, signs out, or the token
+ * refreshes. With no internet, supabase-js first reports "no session" for an
+ * expired one it could not refresh; the saved one still counts.
+ */
 export function onSessionChange(listener: (session: Session | null) => void): () => void {
   if (!isApiConfigured()) {
     return () => undefined;
   }
-  const { data } = getSupabase().auth.onAuthStateChange((_event, session) => listener(session));
+  const { data } = getSupabase().auth.onAuthStateChange((event, session) => {
+    if (event === 'INITIAL_SESSION' && !session) {
+      readStoredSession().then(listener, () => listener(null));
+    } else {
+      listener(session);
+    }
+  });
   return () => data.subscription.unsubscribe();
 }

@@ -19,25 +19,7 @@ export async function saveThemePreference(preference: StoredTheme): Promise<void
   await AsyncStorage.setItem(THEME_PREFERENCE_KEY, preference);
 }
 
-/**
- * The old JSON gradebook, if this phone has one:
- * `'empty'` when the student had erased everything, `'present'` otherwise.
- * Before SQLite the app could only show the demo, so there is no real data
- * to carry over — only whether the student wanted it empty.
- */
-export async function readLegacyGradebook(): Promise<'missing' | 'empty' | 'present'> {
-  const raw = await AsyncStorage.getItem(LEGACY_GRADEBOOK_KEY);
-  if (raw === null) {
-    return 'missing';
-  }
-  try {
-    const parsed = JSON.parse(raw) as { courses?: unknown[] };
-    return Array.isArray(parsed.courses) && parsed.courses.length === 0 ? 'empty' : 'present';
-  } catch {
-    return 'present';
-  }
-}
-
+/** Removes the gradebook older versions kept as JSON; it only ever held the demo. */
 export async function removeLegacyGradebook(): Promise<void> {
   await AsyncStorage.removeItem(LEGACY_GRADEBOOK_KEY);
 }

@@ -28,7 +28,7 @@ storage, F14 cloud sync).
 
 | Part | File | What it does |
 |---|---|---|
-| Grade engine | [`mobile/src/engine/grade-engine.ts`](../mobile/src/engine/grade-engine.ts) | Same rules as the SQL engine; tests check the same hand-computed numbers. |
+| Grade engine | [`mobile/src/engine/grade-engine.ts`](../mobile/src/engine/grade-engine.ts) | Same rules as the SQL engine; tests compare the two on random gradebooks. |
 | Local database | [`mobile/src/db/`](../mobile/src/db/) | expo-sqlite, same tables as Supabase plus `dirty` / `deleted`. |
 | Sync engine | [`mobile/src/sync/sync-engine.ts`](../mobile/src/sync/sync-engine.ts) | Pull, then push. Never two syncs at once. |
 | Row mapping | [`mobile/src/sync/changes.ts`](../mobile/src/sync/changes.ts) | Collect changed rows; apply pulled rows. |
@@ -122,8 +122,13 @@ unsynced edit on a phone wins. Two phones editing the *same* assignment offline
 easy to understand; field-by-field merging is not worth the complexity now.
 
 Other cases:
-- A row whose parent was deleted on another device is skipped by
-  `push_changes` (never an error that blocks every later push).
+- **An edit beats a delete.** When another device deleted a class (or a period or
+  category) and this phone has unsent edits anywhere in it, the whole class is
+  kept and pushed back, on every device.
+- A row whose parent is not in the cloud is skipped by `push_changes` (never an
+  error that blocks every later push) and listed in its `skipped` reply. The
+  phone keeps it unsent and sends it again together with its parents, or drops
+  it when the parent is gone there too.
 - Two devices adding the same calendar event under different ids → the server
   keeps one and tombstones the other.
 
@@ -133,15 +138,19 @@ Other cases:
 |---|---|
 | First sign-in on a phone with its own courses | They are uploaded and merged with the account. |
 | First sign-in, phone has only the sample | The sample is dropped, the account's grades come down. |
-| Signing in as a different account | The phone's copy is cleared first. |
-| Sign out | One last sync, then the phone's copy is removed (the cloud keeps it). Settings warns if changes could not be sent. |
-| Session expires on its own | Nothing is deleted; signing back in continues where it left off. |
+| Signing in as a different account | The phone's copy is cleared first. If it has changes that never reached the cloud, the app asks; "Cancel" keeps them and signs the new account out. |
+| A request is still running when the account changes | Its result is dropped: every read and write checks, in the same transaction, that the gradebook is still that account's. |
+| Opening the app | The saved session is used, also offline with an expired access token (it is refreshed later). |
+| Sign out | One last sync, then the phone's copy is removed (the cloud keeps it). If changes could not be sent, the app asks before losing them. Offline, the session is removed from the phone. |
+| The server ends the session | Nothing is deleted; signing back in continues where it left off. |
 
 ## Testing
 
 - `mobile/src/sync/__tests__/sync-engine.test.ts` runs the real SQL against Node's
   built-in SQLite and a fake server with the same rules: two phones converging,
   offline edits, deletes, conflicts, accounts.
+- `real-server.test.ts` syncs phones through the real migrations in PGlite, and
+  `sql-real-server.test.ts` runs the SQL test files there too.
 - `supabase/tests/sync_test.sql` checks the server: first pull, empty pull at the
   head, one change → one row, tombstones and cascades, pushes, orphans,
   duplicates, and that one student cannot read or overwrite another's rows.
