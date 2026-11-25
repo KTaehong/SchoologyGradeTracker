@@ -116,6 +116,57 @@ Router _studentRouter(BessyApp app) {
     return ok(result.toJson());
   });
 
+  // Grade engine — grades computed server-side with the app's own GradeEngine,
+  // plus saved forecasts. Auth is handled by the middleware this router is
+  // mounted behind; handlers just use currentUser(req). Section ids come from
+  // the client (e.g. Schoology), so path params are URL-decoded.
+  r.get('/grades', (Request req) async {
+    final overview = await app.grades.overview(currentUser(req).id);
+    return ok(overview.toJson());
+  });
+
+  r.get('/grades/<sectionId>', (Request req, String sectionId) async {
+    final grade = await app.grades.course(currentUser(req).id, _decode(sectionId));
+    return ok(grade.toJson());
+  });
+
+  r.get('/grades/<sectionId>/forecasts', (Request req, String sectionId) async {
+    final view = await app.grades.forecasts(currentUser(req).id, _decode(sectionId));
+    return ok(view.toJson());
+  });
+
+  r.post('/grades/<sectionId>/forecasts', (Request req, String sectionId) async {
+    final body = await readJsonMap(req);
+    final earned = optionalNonNegative(body, 'earned');
+    if (earned == null) {
+      throw const ApiException.badRequest(
+          'missing_field', 'Field "earned" is required.');
+    }
+    final view = await app.grades.addForecast(
+      currentUser(req).id,
+      _decode(sectionId),
+      periodId: requireString(body, 'periodId'),
+      categoryId: requireString(body, 'categoryId'),
+      earned: earned,
+      assignmentId: optionalString(body, 'assignmentId'),
+      title: optionalString(body, 'title'),
+      maxPoints: optionalNonNegative(body, 'maxPoints'),
+    );
+    return created(view.toJson());
+  });
+
+  r.delete('/grades/<sectionId>/forecasts', (Request req, String sectionId) async {
+    final view = await app.grades.clearForecasts(currentUser(req).id, _decode(sectionId));
+    return ok(view.toJson());
+  });
+
+  r.delete('/grades/<sectionId>/forecasts/<forecastId>',
+      (Request req, String sectionId, String forecastId) async {
+    final view = await app.grades
+        .deleteForecast(currentUser(req).id, _decode(sectionId), _decode(forecastId));
+    return ok(view.toJson());
+  });
+
   // Devices + notification prefs
   r.post('/devices', (Request req) async {
     final body = await readJsonMap(req);
@@ -177,6 +228,15 @@ Router _studentRouter(BessyApp app) {
   });
 
   return r;
+}
+
+/// shelf_router hands path params over still percent-encoded.
+String _decode(String param) {
+  try {
+    return Uri.decodeComponent(param);
+  } on ArgumentError {
+    throw const ApiException.badRequest('invalid_path');
+  }
 }
 
 // ---------------------------------------------------------------------------

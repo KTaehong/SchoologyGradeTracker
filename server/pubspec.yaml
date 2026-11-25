@@ -14,6 +14,10 @@ dependencies:
   shelf: ^1.4.2
   shelf_router: ^1.1.4
   crypto: ^3.0.3
+  # The same grade engine + models the app uses, so server-computed grades
+  # always match what the student sees on-device.
+  grade_core:
+    path: ../packages/grade_core
 
 dev_dependencies:
   test: ^1.25.0

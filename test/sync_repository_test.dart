@@ -22,6 +22,20 @@ Course _sampleCourse() => const Course(
       ],
     );
 
+ApiClient _client(http.Client mock, [String? token = 'tok']) => ApiClient(
+      baseUrl: Uri.parse('https://api.bessy.test'),
+      httpClient: mock,
+      sessions: MemorySessionStore(token == null
+          ? null
+          : AuthSession(
+              userId: 'u_1',
+              email: 'a@b.com',
+              role: 'student',
+              accessToken: token,
+              refreshToken: 'rt',
+            )),
+    );
+
 void main() {
   final base = Uri.parse('https://api.bessy.test');
 
@@ -43,7 +57,7 @@ void main() {
         headers: {'content-type': 'application/json'},
       );
     });
-    final repo = SyncRepository(ApiClient(baseUrl: base, httpClient: mock), () => 'tok123');
+    final repo = SyncRepository(_client(mock, 'tok123'));
 
     final outcome = await repo.pushGradebook([_sampleCourse()]);
 
@@ -69,7 +83,7 @@ void main() {
         headers: {'content-type': 'application/json'},
       );
     });
-    final repo = SyncRepository(ApiClient(baseUrl: base, httpClient: mock), () => 'tok');
+    final repo = SyncRepository(_client(mock));
 
     final courses = await repo.fetchCourses();
     expect(courses, hasLength(1));
@@ -81,24 +95,32 @@ void main() {
     final mock = MockClient((req) async => http.Response(
         jsonEncode({'courses': [_sampleCourse().toJson()]}), 200,
         headers: {'content-type': 'application/json'}));
-    final repo = SyncRepository(ApiClient(baseUrl: base, httpClient: mock), () => 'tok');
+    final repo = SyncRepository(_client(mock));
     expect((await repo.fetchCourse('s1')).title, 'Calculus BC AP');
     expect(() => repo.fetchCourse('missing'), throwsStateError);
   });
 
-  test('requires a signed-in token', () async {
-    final mock = MockClient((req) async => http.Response('{}', 200));
-    final repo = SyncRepository(ApiClient(baseUrl: base, httpClient: mock), () => null);
-    expect(() => repo.fetchCourses(), throwsStateError);
+  test('requires a signed-in session, without touching the network', () async {
+    var calls = 0;
+    final mock = MockClient((req) async {
+      calls++;
+      return http.Response('{}', 200);
+    });
+    final repo = SyncRepository(_client(mock, null));
+    await expectLater(
+      repo.fetchCourses(),
+      throwsA(isA<ApiClientException>().having((e) => e.code, 'code', 'not_signed_in')),
+    );
+    expect(calls, 0);
   });
 
   test('non-2xx surfaces as ApiClientException with the server error code', () async {
     final mock = MockClient((req) async => http.Response(
         jsonEncode({'error': 'account_disabled'}), 403,
         headers: {'content-type': 'application/json'}));
-    final api = ApiClient(baseUrl: base, httpClient: mock);
+    final api = _client(mock);
     expect(
-      () => api.pullGradebook('tok'),
+      () => api.pullGradebook(),
       throwsA(isA<ApiClientException>()
           .having((e) => e.status, 'status', 403)
           .having((e) => e.code, 'code', 'account_disabled')),
@@ -114,9 +136,13 @@ void main() {
         }),
         200,
         headers: {'content-type': 'application/json'}));
-    final api = ApiClient(baseUrl: base, httpClient: mock);
+    final sessions = MemorySessionStore();
+    final api = ApiClient(baseUrl: base, httpClient: mock, sessions: sessions);
     final session = await api.logIn('a@b.com', 'password1');
     expect(session.userId, 'u_1');
     expect(session.accessToken, 'at');
+    // Stored, so later calls are authenticated without passing it around.
+    expect(sessions.session?.accessToken, 'at');
+    expect(api.isSignedIn, isTrue);
   });
 }

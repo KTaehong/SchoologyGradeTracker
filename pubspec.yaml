@@ -1,5 +1,5 @@
 name: bessy
-description: "A new Flutter project."
+description: "Schoology Grade Tracker — a privacy-first Flutter app that imports your own Schoology grades from a screenshot and computes them on-device."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -35,6 +35,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.4.2
+
+  # Grade engine + models, shared with the API server (server/).
+  grade_core:
+    path: packages/grade_core
 
   # Keyless import stack (P1, own-data-only).
   http: ^1.2.2                        # fetch the Schoology iCal feed in-app

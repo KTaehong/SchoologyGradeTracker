@@ -60,6 +60,16 @@ class SyncState {
 
 const Object _keep = Object();
 
+/// The app's one [ApiClient], or null until a server URL is configured. Its
+/// session lives in [SyncController], so any feature can call authenticated
+/// endpoints (`ref.read(apiClientProvider)?.fetchGrades()`) without handling
+/// tokens — login, bearer headers and refresh are all taken care of.
+final apiClientProvider = Provider<ApiClient?>((ref) {
+  // Rebuild when the server changes; the controller owns the client itself.
+  ref.watch(syncControllerProvider.select((s) => s.serverUrl));
+  return ref.read(syncControllerProvider.notifier).client;
+});
+
 /// Drives the opt-in cloud-sync feature (docs/SYSTEM_COMPONENTS.md §1.1 / §3):
 /// configure the server, sign in, and push the local gradebook up. The local
 /// [gradebookProvider] stays the offline-first source of truth; this only syncs
@@ -67,33 +77,50 @@ const Object _keep = Object();
 final syncControllerProvider =
     NotifierProvider<SyncController, SyncState>(SyncController.new);
 
-class SyncController extends Notifier<SyncState> {
+/// Also the [SessionStore] behind [apiClientProvider]: the API client
+/// reads the session from here and saves refreshed ones back, which keeps the
+/// signed-in state, local storage and the UI in step.
+class SyncController extends Notifier<SyncState> implements SessionStore {
   @override
   SyncState build() {
     final store = ref.read(localStoreProvider);
-    final url = store.loadServerUrl();
     final raw = store.loadSession();
-    final session = raw == null
-        ? null
-        : AuthSession(
-            userId: raw['userId'] as String? ?? '',
-            email: raw['email'] as String? ?? '',
-            role: raw['role'] as String? ?? 'student',
-            accessToken: raw['accessToken'] as String? ?? '',
-            refreshToken: raw['refreshToken'] as String? ?? '',
-          );
-    return SyncState(serverUrl: url, session: session);
+    return SyncState(
+      serverUrl: store.loadServerUrl(),
+      session: raw == null ? null : AuthSession.fromStorageJson(raw),
+    );
+  }
+
+  @override
+  AuthSession? get session => state.session;
+
+  @override
+  Future<void> saveSession(AuthSession? session) async {
+    await ref.read(localStoreProvider).saveSession(session?.toStorageJson());
+    state = state.copyWith(session: session);
+  }
+
+  ApiClient? _api;
+
+  /// The client for the configured server (null until one is set), shared
+  /// app-wide through [apiClientProvider].
+  ApiClient? get client {
+    final url = state.serverUrl;
+    if (url == null || url.isEmpty) return null;
+    if (_api == null || _api!.baseUrl.toString() != url) {
+      _api = ApiClient(
+        baseUrl: Uri.parse(url),
+        httpClient: ref.read(httpClientProvider),
+        sessions: this,
+      );
+    }
+    return _api;
   }
 
   ApiClient _client() {
-    final url = state.serverUrl;
-    if (url == null || url.isEmpty) {
-      throw StateError('Cloud sync is not configured.');
-    }
-    return ApiClient(
-      baseUrl: Uri.parse(url),
-      httpClient: ref.read(httpClientProvider),
-    );
+    final c = client;
+    if (c == null) throw StateError('Cloud sync is not configured.');
+    return c;
   }
 
   /// Save (or clear) the API base URL.
@@ -113,9 +140,8 @@ class SyncController extends Notifier<SyncState> {
       Future<AuthSession> Function(ApiClient) op, String okMessage) async {
     state = state.copyWith(busy: true, message: null);
     try {
-      final session = await op(_client());
-      await _persistSession(session);
-      state = state.copyWith(session: session, busy: false, message: okMessage);
+      await op(_client()); // the client saves the session via [saveSession]
+      state = state.copyWith(busy: false, message: okMessage);
     } on ApiClientException catch (e) {
       state = state.copyWith(busy: false, message: _friendly(e));
     } catch (e) {
@@ -132,7 +158,7 @@ class SyncController extends Notifier<SyncState> {
     }
     state = state.copyWith(busy: true, message: null);
     try {
-      final repo = SyncRepository(_client(), () => state.session?.accessToken);
+      final repo = SyncRepository(_client());
       final courses = ref.read(gradebookProvider);
       final outcome = await repo.pushGradebook(courses);
       state = state.copyWith(
@@ -152,18 +178,12 @@ class SyncController extends Notifier<SyncState> {
   }
 
   Future<void> signOut() async {
-    await ref.read(localStoreProvider).saveSession(null);
-    state = state.copyWith(session: null, message: 'Signed out', lastSyncedAt: null);
-  }
-
-  Future<void> _persistSession(AuthSession s) {
-    return ref.read(localStoreProvider).saveSession({
-      'userId': s.userId,
-      'email': s.email,
-      'role': s.role,
-      'accessToken': s.accessToken,
-      'refreshToken': s.refreshToken,
-    });
+    try {
+      // Revokes the refresh token server-side; offline sign-out still works.
+      await client?.logOut();
+    } catch (_) {}
+    await saveSession(null);
+    state = state.copyWith(message: 'Signed out', lastSyncedAt: null);
   }
 
   String _friendly(ApiClientException e) {
@@ -178,6 +198,10 @@ class SyncController extends Notifier<SyncState> {
         return 'That email address looks invalid.';
       case 'account_disabled':
         return 'This account is disabled.';
+      case 'invalid_refresh':
+      case 'refresh_revoked':
+      case 'not_signed_in':
+        return 'Your session expired. Sign in again.';
       default:
         return e.message ?? 'Something went wrong (${e.status}).';
     }

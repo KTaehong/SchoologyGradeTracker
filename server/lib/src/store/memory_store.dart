@@ -1,3 +1,5 @@
+import 'package:grade_core/grade_core.dart' show GradeForecast;
+
 import '../models/audit.dart';
 import '../models/share_link.dart';
 import '../models/user.dart';
@@ -10,6 +12,7 @@ class MemoryStore implements Store {
   final Map<String, User> _usersById = {};
   final Map<String, String> _idByEmail = {}; // lower(email) -> id
   final Map<String, StoredGradebook> _gradebooks = {};
+  final Map<String, List<GradeForecast>> _forecasts = {}; // userId::sectionId
   final Map<String, Set<String>> _refreshHashes = {}; // userId -> hashes
   final Map<String, List<DeviceToken>> _devices = {};
   final Map<String, NotificationPrefs> _prefs = {};
@@ -20,6 +23,7 @@ class MemoryStore implements Store {
   var _userSeq = 0;
   var _shareSeq = 0;
   var _auditSeq = 0;
+  var _forecastSeq = 0;
 
   String _newUserId() => 'u_${++_userSeq}';
   String _newShareId() => 's_${++_shareSeq}';
@@ -79,6 +83,7 @@ class MemoryStore implements Store {
     final u = _usersById.remove(id);
     if (u != null) _idByEmail.remove(u.email.toLowerCase());
     _gradebooks.remove(id);
+    _forecasts.removeWhere((key, _) => key.startsWith('$id::'));
     _refreshHashes.remove(id);
     _devices.remove(id);
     _prefs.remove(id);
@@ -115,6 +120,39 @@ class MemoryStore implements Store {
     _gradebooks[userId] = gb;
     return gb;
   }
+
+  static String _forecastKey(String userId, String sectionId) =>
+      '$userId::$sectionId';
+
+  @override
+  Future<List<GradeForecast>> forecastsFor(
+          String userId, String sectionId) async =>
+      List.unmodifiable(_forecasts[_forecastKey(userId, sectionId)] ?? const []);
+
+  @override
+  Future<GradeForecast> insertForecast(
+      String userId, String sectionId, GradeForecast forecast) async {
+    final saved = forecast.copyWith(
+      id: forecast.id.isEmpty ? 'f_${++_forecastSeq}' : forecast.id,
+      createdAt: forecast.createdAt ?? DateTime.now().toUtc(),
+    );
+    (_forecasts[_forecastKey(userId, sectionId)] ??= []).add(saved);
+    return saved;
+  }
+
+  @override
+  Future<bool> deleteForecast(
+      String userId, String sectionId, String forecastId) async {
+    final list = _forecasts[_forecastKey(userId, sectionId)];
+    if (list == null) return false;
+    final before = list.length;
+    list.removeWhere((f) => f.id == forecastId);
+    return list.length < before;
+  }
+
+  @override
+  Future<void> clearForecasts(String userId, String sectionId) async =>
+      _forecasts.remove(_forecastKey(userId, sectionId));
 
   @override
   Future<void> registerDevice(String userId, DeviceToken token) async {

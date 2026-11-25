@@ -1,4 +1,4 @@
-<title>BessyV2 Architecture</title>
+<title>Schoology Grade Tracker Architecture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -188,7 +188,7 @@
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">BessyV2 · System Architecture</div>
+    <div class="eyebrow">Schoology Grade Tracker · System Architecture</div>
     <h1>A Flutter grades app on a three-tier cloud backend</h1>
     <p class="lede">Grades are captured keyless on the device, then synced up to an API and stored in a PostgreSQL database — the system of record that powers cross-device sync, grade-change notifications, caregiver access, and admin/support tooling. The client is built today; the backend is what this phase builds.</p>
   </header>
@@ -320,7 +320,7 @@
   <div class="sidebar-note"><b>Privacy as a constraint, not the whole model:</b> putting grades on a server weakens the old "no server ever sees your grades" guarantee. Keep cloud sync opt-in, prefer end-to-end encryption so the server stores ciphertext, minimize what's stored, and keep the device usable offline from its local cache.</div>
 
   <footer>
-    <span>BessyV2 · "Better Schoology" grades</span>
+    <span>Schoology Grade Tracker · a free grades client</span>
     <span>Flutter · REST/GraphQL API · PostgreSQL</span>
     <span>Companion doc: SYSTEM_COMPONENTS.md</span>
   </footer>

@@ -1,5 +1,6 @@
 import '../models/gradebook.dart';
 import '../store/store.dart';
+import 'grades_service.dart';
 import 'notification_service.dart';
 
 /// The result of a sync-up: the new version stamp and any grade changes that
@@ -33,6 +34,7 @@ class GradebookService {
   /// Push a fresh gradebook up. Diffs against the stored copy, saves the new
   /// one, and fans out notifications for any real grade changes.
   Future<SyncResult> push(String userId, List<dynamic> courses) async {
+    validateCourses(courses);
     final previous = await _store.loadGradebook(userId);
     final changes = detectChanges(previous?.courses ?? const [], courses);
     final saved = await _store.saveGradebook(userId, courses);

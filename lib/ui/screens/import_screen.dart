@@ -215,8 +215,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
         Text(
-          'Snap or upload your Schoology grades screenshot. Bessy reads it with '
-          'on-device text recognition, then files it automatically.',
+          'Snap or upload your Schoology grades screenshot. It’s read with '
+          'on-device text recognition, then filed automatically.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 20),
@@ -367,7 +367,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         Text('Assignments', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 4),
         Text(
-          'Bessy reads the score off each row — double-check names, since OCR can '
+          'The score is read off each row — double-check names, since OCR can '
           'misread them.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.outline),
         ),

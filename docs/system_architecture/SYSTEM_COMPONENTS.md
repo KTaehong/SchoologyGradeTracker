@@ -1,4 +1,4 @@
-# BessyV2 — System Components & Architecture
+# Schoology Grade Tracker — System Components & Architecture
 
 *A "Better Schoology" grades app — Flutter client backed by a cloud service. Assignment deliverable (a): major system components. See the companion architecture diagram for the visual reference.*
 
@@ -6,7 +6,7 @@
 
 ## 0. Overview — a three-tier, database-backed system
 
-BessyV2 is a **three-tier application**:
+Schoology Grade Tracker is a **three-tier application**:
 
 1. **Client tier** — the apps people use: a Flutter student app (Android/iOS), a caregiver/parent mode, and a separate internal admin console.
 2. **Application / API tier** — a hosted API that is the single access path to the backend, plus the services around it (auth, background workers, push).

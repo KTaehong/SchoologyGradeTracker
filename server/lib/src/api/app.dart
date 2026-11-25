@@ -6,6 +6,7 @@ import '../services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/caregiver_service.dart';
 import '../services/gradebook_service.dart';
+import '../services/grades_service.dart';
 import '../services/notification_service.dart';
 import '../store/memory_store.dart';
 import '../store/store.dart';
@@ -28,6 +29,7 @@ class BessyApp {
     notifications = NotificationService(this.store, dispatcher: pushDispatcher);
     auth = AuthService(this.store, _hasher, this.tokens);
     gradebook = GradebookService(this.store, notifications);
+    grades = GradesService(this.store);
     caregiver = CaregiverService(this.store);
     admin = AdminService(this.store, _hasher);
   }
@@ -38,6 +40,7 @@ class BessyApp {
   late final NotificationService notifications;
   late final AuthService auth;
   late final GradebookService gradebook;
+  late final GradesService grades;
   late final CaregiverService caregiver;
   late final AdminService admin;
 

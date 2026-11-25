@@ -1,3 +1,5 @@
+import 'package:grade_core/grade_core.dart' show GradeForecast;
+
 import '../models/audit.dart';
 import '../models/share_link.dart';
 import '../models/user.dart';
@@ -60,6 +62,15 @@ abstract class Store {
   // Gradebook sync
   Future<StoredGradebook?> loadGradebook(String userId);
   Future<StoredGradebook> saveGradebook(String userId, List<dynamic> courses);
+
+  // Grade forecasts (saved What-If entries), scoped to one of the user's courses
+  Future<List<GradeForecast>> forecastsFor(String userId, String sectionId);
+  /// Saves [forecast], assigning an id when it has none. Returns the saved row.
+  Future<GradeForecast> insertForecast(
+      String userId, String sectionId, GradeForecast forecast);
+  /// Returns false when no such forecast exists.
+  Future<bool> deleteForecast(String userId, String sectionId, String forecastId);
+  Future<void> clearForecasts(String userId, String sectionId);
 
   // Devices + notification prefs
   Future<void> registerDevice(String userId, DeviceToken token);

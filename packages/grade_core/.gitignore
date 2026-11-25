@@ -1,0 +1,2 @@
+# A library package: the app and server lockfiles pin its dependencies.
+pubspec.lock

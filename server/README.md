@@ -6,8 +6,11 @@ record. Implements the three separately-authorized API sets from
 **Caregiver**, and **Admin/Support** — plus auth, gradebook sync with
 change-detection, notification fan-out, and audited account administration.
 
-Written in Dart (one language with the client, so the model JSON contract is
-shared). Self-contained: only `shelf`, `shelf_router`, and `crypto`.
+Written in Dart (one language with the client). The gradebook models and the
+grade engine live in [`packages/grade_core`](../packages/grade_core), which both
+the app and this server depend on, so server-computed grades use exactly the
+same math as the app and the JSON contract can't drift. Otherwise
+self-contained: only `shelf`, `shelf_router`, and `crypto`.
 
 ## Run
 
@@ -28,13 +31,13 @@ BESSY_ADMIN_EMAIL=admin@bessy.app BESSY_ADMIN_PASSWORD=changeme123 \
 ## Test
 
 ```bash
-dart test          # 47 tests, sub-second, no external services
+dart test          # 61 tests, sub-second, no external services
 ```
 
 Covered: PBKDF2 against published vectors, token signing/tampering/expiry, grade
 change-detection, the auth service, and an in-process end-to-end pass over the
-real HTTP handler (signup → sync → change-detection → caregiver share → every
-admin action → audit log).
+real HTTP handler (signup → sync → change-detection → grades & forecasts →
+caregiver share → every admin action → audit log).
 
 ## API surface (`/v1`)
 
@@ -43,7 +46,22 @@ admin action → audit log).
 **Student / Caregiver (Bearer access token)**
 - `GET /me`, `POST /auth/logout`
 - `GET /gradebook`, `PUT /gradebook` — sync down / up; the PUT response reports
-  detected grade changes
+  detected grade changes. A course the grade engine can't read is rejected
+  (`400 invalid_course`).
+- **Grade engine** — computed from the synced gradebook:
+  - `GET /grades` — every course's `current` grade (overall, per period and
+    category, midterm/final) plus `projected` when it has active forecasts
+  - `GET /grades/<sectionId>` — one course
+  - `GET /grades/<sectionId>/forecasts` — saved forecasts, each with a status
+    (`active`, `superseded` once the real score posts, `orphaned` if its target
+    was removed), and the grades they project
+  - `POST /grades/<sectionId>/forecasts` — body `{periodId, categoryId, earned}`
+    plus either `assignmentId` (predict an ungraded assignment; replaces an
+    earlier prediction for it) or `title` + `maxPoints` (add a hypothetical one)
+  - `DELETE /grades/<sectionId>/forecasts/<id>`, `DELETE /grades/<sectionId>/forecasts`
+
+  Every forecast call returns the same `{grade, forecasts}` body, so the client
+  can redraw from one response.
 - `POST /devices`, `GET|PUT /notifications/prefs`
 - `POST /caregiver/invites`, `GET /caregiver/invites`, `DELETE /caregiver/invites/<id>`
 - `POST /caregiver/accept`, `GET /caregiver/students`,
@@ -63,7 +81,8 @@ admin action → audit log).
 bin/server.dart ─ HTTP entrypoint (dart:io + shelf)
 lib/src/
   api/        router, JSON error boundary, auth middleware (role-gated)
-  services/   auth · gradebook (sync + change-detection) · caregiver · admin · notifications
+  services/   auth · gradebook (sync + change-detection) · grades (engine + forecasts)
+              · caregiver · admin · notifications
   security/   PBKDF2-HMAC-SHA256 passwords · HMAC-SHA256 tokens
   store/      Store interface + MemoryStore (production swaps in a PostgresStore)
   models/     user · gradebook (flatten + diff) · share_link · audit

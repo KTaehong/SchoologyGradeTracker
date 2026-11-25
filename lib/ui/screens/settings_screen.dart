@@ -305,7 +305,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sync your grades to your own BessyV2 server for backup, '
+          Text('Sync your grades to your own server for backup, '
               'cross-device access, and grade-change notifications.', style: small),
           const SizedBox(height: 10),
           TextField(
@@ -315,7 +315,7 @@ class _CloudSyncSectionState extends ConsumerState<_CloudSyncSection> {
               border: OutlineInputBorder(),
               isDense: true,
               labelText: 'Server URL',
-              hintText: 'https://api.your-bessy.example',
+              hintText: 'https://api.your-server.example',
             ),
           ),
           const SizedBox(height: 8),

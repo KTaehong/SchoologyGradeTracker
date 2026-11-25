@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8080", "--web-hostname", "127.0.0.1"],
       "port": 8080,
       "url": "http://127.0.0.1:8080"
+    },
+    {
+      "name": "expo-web",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d C:\\Users\\thkim\\Projects\\SchoologyGradeTracker\\mobile && npx expo start --web --port 8081"],
+      "port": 8081
     }
   ]
 }

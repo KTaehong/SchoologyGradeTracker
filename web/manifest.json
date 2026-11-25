@@ -1,11 +1,11 @@
 {
-    "name": "bessy",
-    "short_name": "bessy",
+    "name": "Schoology Grade Tracker",
+    "short_name": "Grade Tracker",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#4F46E5",
+    "theme_color": "#4F46E5",
+    "description": "Track your Schoology grades — import from a screenshot, compute grades on-device, run What-If and midterm/final projections.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

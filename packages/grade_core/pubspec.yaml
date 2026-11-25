@@ -1,0 +1,13 @@
+name: grade_core
+description: >-
+  The grade engine and gradebook models, shared by the Flutter app and the API
+  server so both compute every grade with exactly the same math. Pure Dart — no
+  Flutter, no I/O.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.0
+
+dev_dependencies:
+  test: ^1.25.0

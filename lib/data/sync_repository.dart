@@ -6,25 +6,16 @@ import 'grade_repository.dart';
 /// SYSTEM_COMPONENTS.md §1.1). The UI and grade engine sit above `GradeRepository`
 /// unchanged; only this implementation knows there's a server.
 ///
-/// It reads the access token from an injected [tokenProvider] so it stays out of
-/// the auth/session concern, and mirrors the offline-first model: callers use
-/// the local cache as the source of truth and use [pushGradebook] to sync up.
+/// Auth lives entirely in [ApiClient] (it attaches and refreshes the session),
+/// and it mirrors the offline-first model: callers use the local cache as the
+/// source of truth and use [pushGradebook] to sync up.
 class SyncRepository implements GradeRepository {
-  SyncRepository(this._api, this._tokenProvider);
+  SyncRepository(this._api);
 
   final ApiClient _api;
-  final String? Function() _tokenProvider;
-
-  String _requireToken() {
-    final t = _tokenProvider();
-    if (t == null || t.isEmpty) {
-      throw StateError('Not signed in — no access token available.');
-    }
-    return t;
-  }
 
   @override
-  Future<List<Course>> fetchCourses() => _api.pullGradebook(_requireToken());
+  Future<List<Course>> fetchCourses() => _api.pullGradebook();
 
   @override
   Future<Course> fetchCourse(String sectionId) async {
@@ -38,5 +29,5 @@ class SyncRepository implements GradeRepository {
   /// Sync the local gradebook up to the server, returning the change report the
   /// notification worker acted on.
   Future<SyncOutcome> pushGradebook(List<Course> courses) =>
-      _api.pushGradebook(_requireToken(), courses);
+      _api.pushGradebook(courses);
 }

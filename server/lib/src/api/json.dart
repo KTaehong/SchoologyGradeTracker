@@ -37,3 +37,25 @@ String requireString(Map<String, dynamic> body, String key) {
   }
   return v;
 }
+
+/// Pull an optional string field (null when absent or empty), or throw a 400
+/// when it has the wrong type.
+String? optionalString(Map<String, dynamic> body, String key) {
+  final v = body[key];
+  if (v == null || v == '') return null;
+  if (v is! String) {
+    throw ApiException.badRequest('invalid_field', 'Field "$key" must be a string.');
+  }
+  return v;
+}
+
+/// Pull an optional finite, non-negative number, or throw a 400.
+double? optionalNonNegative(Map<String, dynamic> body, String key) {
+  final v = body[key];
+  if (v == null) return null;
+  if (v is! num || !v.isFinite || v < 0) {
+    throw ApiException.badRequest(
+        'invalid_field', 'Field "$key" must be a number ≥ 0.');
+  }
+  return v.toDouble();
+}

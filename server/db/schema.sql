@@ -96,6 +96,24 @@ CREATE TABLE assignments (
 );
 CREATE INDEX assignments_category_idx ON assignments (category_id);
 
+-- Saved What-If forecasts. Keyed by the client-side ids (not FKs into the
+-- normalized tables) because those rows are rebuilt on every sync; a forecast
+-- whose target disappears is reported as "orphaned" rather than deleted.
+CREATE TABLE grade_forecasts (
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id       UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  section_id     TEXT        NOT NULL,              -- client-side course id
+  period_key     TEXT        NOT NULL,
+  category_key   TEXT        NOT NULL,
+  assignment_key TEXT,                              -- set = predicts that assignment
+  title          TEXT,                              -- set = adds a new assignment
+  earned         DOUBLE PRECISION NOT NULL CHECK (earned >= 0),
+  max_points     DOUBLE PRECISION CHECK (max_points >= 0),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (assignment_key IS NOT NULL OR (title IS NOT NULL AND max_points IS NOT NULL))
+);
+CREATE INDEX grade_forecasts_owner_section_idx ON grade_forecasts (owner_id, section_id);
+
 -- ---------------------------------------------------------------------------
 -- Caregiver sharing
 -- ---------------------------------------------------------------------------

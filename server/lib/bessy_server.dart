@@ -13,6 +13,7 @@ export 'src/services/admin_service.dart';
 export 'src/services/auth_service.dart';
 export 'src/services/caregiver_service.dart';
 export 'src/services/gradebook_service.dart';
+export 'src/services/grades_service.dart';
 export 'src/services/notification_service.dart';
 export 'src/store/memory_store.dart';
 export 'src/store/store.dart';
