@@ -1,5 +1,5 @@
 import { type ReactNode, type Ref } from 'react';
-import { Pressable, StyleSheet, Switch, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, StyleSheet, Switch, TextInput, View, type TextInputInstance, type TextInputProps } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -118,7 +118,7 @@ export function TextField({
   style,
   ref,
   ...inputProps
-}: { label: string; ref?: Ref<TextInput> } & TextInputProps) {
+}: { label: string; ref?: Ref<TextInputInstance> } & TextInputProps) {
   const colors = useTheme();
   return (
     <View style={styles.field}>

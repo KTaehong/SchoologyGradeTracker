@@ -1,13 +1,13 @@
 # Schoology Grade Tracker — notes for Claude
 
-A student grades app. The app is `mobile/` (React Native + Expo SDK 57,
+A student grades app. The app is `mobile/` (React Native + Expo SDK 58,
 TypeScript, expo-router). The backend is a hosted Supabase project (Postgres,
 Auth, Realtime); its SQL is in `supabase/`. There is no server to start: the
 backend is already running in the cloud and `mobile/.env` points the app at it.
 
 ## Build and run on a Mac (iOS)
 
-Needs: Xcode (with an iOS simulator and the command line tools), Node.js 20 or
+Needs: Xcode (with an iOS simulator and the command line tools), Node.js 22.13 or
 newer, and CocoaPods (`brew install cocoapods`). Run everything in `mobile/`.
 
 ```bash

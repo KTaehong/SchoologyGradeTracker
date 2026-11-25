@@ -5,19 +5,19 @@
  */
 import type { Page } from '@playwright/test';
 
-import { answerDialogs, button, expect, field, hasAccount, openTab, signIn, test, text, waitForSync } from './support/app';
+import { answerDialogs, button, expect, field, hasAccount, inFront, openTab, signIn, test, text, waitForSync } from './support/app';
 
 const CLASS_NAME = 'E2E Robotics';
 
 async function deleteTestClasses(page: Page) {
   await openTab(page, 'Grades');
   for (;;) {
-    const card = page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }).filter({ visible: true });
+    const card = inFront(page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }));
     if ((await card.count()) === 0) return;
     await card.last().click();
     await button(page, 'Edit').click();
     await button(page, 'Delete class').click();
-    await expect(page.getByRole('heading', { name: 'Grades' }).filter({ visible: true })).toBeVisible();
+    await expect(inFront(page.getByRole('heading', { name: 'Grades' }))).toBeVisible();
   }
 }
 
@@ -72,7 +72,7 @@ test.describe('typing in a class by hand', () => {
     await addAssignment.dblclick();
     await expect(text(page, '90 / 100')).toBeVisible();
     await expect(text(page, '90.00% · A-').first()).toBeVisible();
-    await expect(page.getByText('Unit 1 Test').filter({ visible: true })).toHaveCount(1);
+    await expect(inFront(page.getByText('Unit 1 Test'))).toHaveCount(1);
 
     // A forecast for work that is not graded yet changes the projected grade.
     await button(page, /^\+ Forecast new work/).click();
@@ -97,11 +97,11 @@ test.describe('typing in a class by hand', () => {
 
     // The class is on the Grades tab and on Home.
     await page.goBack();
-    await expect(page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }).filter({ visible: true })).toHaveCount(1);
+    await expect(inFront(page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }))).toHaveCount(1);
     await waitForSync(page);
 
     await deleteTestClasses(page);
-    await expect(page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }).filter({ visible: true })).toHaveCount(0);
+    await expect(inFront(page.getByRole('button', { name: new RegExp(`^${CLASS_NAME}`) }))).toHaveCount(0);
     await waitForSync(page);
   });
 

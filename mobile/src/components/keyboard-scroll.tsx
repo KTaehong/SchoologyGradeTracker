@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   View,
   type StyleProp,
@@ -39,7 +40,7 @@ export function KeyboardScroll({
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
 }) {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const viewport = useRef(0);
   const scrollY = useRef(0);
   const target = useRef<{ y: number; height: number } | null>(null);

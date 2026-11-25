@@ -6,7 +6,7 @@
  */
 import type { Page } from '@playwright/test';
 
-import { answerDialogs, button, expect, field, hasAccount, openTab, signIn, test, text, waitForSync } from './support/app';
+import { answerDialogs, button, expect, field, hasAccount, inFront, openTab, signIn, test, text, waitForSync } from './support/app';
 
 const FEED_HOST = 'https://calendar.e2e-test.example';
 const GOOD_LINK = 'webcal://calendar.e2e-test.example/calendar/feed/ical/1/secret/ical.ics';
@@ -51,7 +51,7 @@ async function fakeSchoology(page: Page) {
 async function openCalendarScreen(page: Page) {
   await openTab(page, 'Settings');
   await button(page, /^Calendar feed/).click();
-  await expect(page.getByRole('heading', { name: 'Schoology calendar' }).filter({ visible: true })).toBeVisible();
+  await expect(inFront(page.getByRole('heading', { name: 'Schoology calendar' }))).toBeVisible();
 }
 
 test.describe('Schoology calendar', () => {
