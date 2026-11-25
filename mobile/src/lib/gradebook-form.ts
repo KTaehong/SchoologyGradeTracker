@@ -97,8 +97,9 @@ export function validateAssignment(form: AssignmentForm): FormResult<AssignmentF
     return { ok: false, error: 'The assignment name is too long (300 characters at most).' };
   }
   const maxScore = parseScore(form.maxScore);
-  if (maxScore === null || (maxScore <= 0 && !form.extraCredit)) {
-    return { ok: false, error: 'Points possible must be a number more than 0.' };
+  // The cloud keeps two decimals, so less than 0.01 would be stored as 0 there.
+  if (maxScore === null || (maxScore < 0.01 && !form.extraCredit)) {
+    return { ok: false, error: 'Points possible must be a number of at least 0.01.' };
   }
   let actualScore: number | null = null;
   if (form.actualScore.trim()) {

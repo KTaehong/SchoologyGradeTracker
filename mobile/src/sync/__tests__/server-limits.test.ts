@@ -46,6 +46,21 @@ describe('fitToServer', () => {
     });
   });
 
+  it('rounds to cents first, so a tiny points possible cannot break the push', () => {
+    // The server stores 0.001 as 0.00, which only extra credit may have.
+    expect(fitToServer('assignments', { title: 'Bonus', max_score: 0.001, actual_score: 0.004, extra_credit: false })).toMatchObject({
+      max_score: 0,
+      actual_score: 0,
+      extra_credit: true,
+    });
+    expect(fitToServer('assignments', { title: 'Quiz', max_score: 0.005, actual_score: 9.999, extra_credit: false })).toMatchObject({
+      max_score: 0.01,
+      actual_score: 10,
+      extra_credit: false,
+    });
+    expect(fitToServer('categories', { name: 'Labs', weight: 33.333, drop_lowest: 0 }).weight).toBe(33.33);
+  });
+
   it('leaves good rows alone', () => {
     const row = { id: 'p', course_id: 'c', name: 'Q1', kind: 'quarter', semester: 1, weight: 25, position: 1 };
     expect(fitToServer('grading_periods', row)).toEqual(row);

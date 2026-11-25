@@ -15,8 +15,10 @@ for f in migrations/*.sql; do
   psql -q -v ON_ERROR_STOP=1 -d "$db" -f "$f"
 done
 
-for t in tests/gradebook_test.sql tests/grade_api_test.sql tests/sync_test.sql tests/delete_account_test.sql \
-         tests/api_security_test.sql tests/sync_and_signup_fixes_test.sql; do
+# Every test file, so a new one is never skipped. Each runs in its own
+# transaction and rolls back. demo_accounts_test.sql runs at the end, after its seed.
+for t in tests/*_test.sql; do
+  [ "$t" = tests/demo_accounts_test.sql ] && continue
   echo "test     $t"
   if ! psql -q -v ON_ERROR_STOP=1 -o /dev/null -d "$db" -f "$t" 2>&1 \
        | sed 's/^psql:[^ ]* NOTICE:  //'; then

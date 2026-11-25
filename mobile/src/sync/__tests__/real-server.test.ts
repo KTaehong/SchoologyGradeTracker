@@ -303,6 +303,40 @@ describeCloud('sync with the real server', () => {
     expect((await readCourses(a.db))[0].name).toHaveLength(200);
   });
 
+  it('keeps syncing when points possible is too small for the server (0.001)', async () => {
+    // The server stores two decimals: 0.001 became 0.00 and broke its check, so
+    // every later push from this phone failed.
+    const student = await newStudent();
+    const a = await phone(student);
+    const [course, period, category] = [randomUUID(), randomUUID(), randomUUID()];
+    await a.db.run(`insert into courses (id, name, grading_mode, position, source, dirty) values (?, 'Art', 'points', 1, 'manual', 1)`, [
+      course,
+    ]);
+    await a.db.run(`insert into grading_periods (id, course_id, name, kind, position, dirty) values (?, ?, 'Q1', 'quarter', 1, 1)`, [
+      period,
+      course,
+    ]);
+    await a.db.run(`insert into categories (id, period_id, name, position, dirty) values (?, ?, 'All', 1, 1)`, [
+      category,
+      period,
+    ]);
+    await a.db.run(
+      `insert into assignments (id, category_id, title, max_score, actual_score, position, dirty)
+       values (?, ?, 'Tiny', 0.001, null, 1, 1), (?, ?, 'Normal', 10, 9, 2, 1)`,
+      [randomUUID(), category, randomUUID(), category],
+    );
+    await a.sync();
+    expect(
+      await server.query(
+        'select title, max_score::float8 as max, extra_credit from public.assignments where student_id = $1 order by position',
+        [student],
+      ),
+    ).toEqual([
+      { title: 'Tiny', max: 0, extra_credit: true },
+      { title: 'Normal', max: 10, extra_credit: false },
+    ]);
+  });
+
   it('syncs manual entry, forecasts, edits and deletes between two phones', async () => {
     const student = await newStudent();
     const a = await phone(student);

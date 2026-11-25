@@ -72,6 +72,9 @@ describe('validateAssignment', () => {
 
   it('allows 0 points possible only for extra credit (as the server does)', () => {
     expect(validateAssignment({ ...form, maxScore: '0' }).ok).toBe(false);
+    // The cloud stores two decimals: 0.001 would be 0 there.
+    expect(validateAssignment({ ...form, maxScore: '0.001' }).ok).toBe(false);
+    expect(validateAssignment({ ...form, maxScore: '0.01', actualScore: '' }).ok).toBe(true);
     expect(validateAssignment({ ...form, maxScore: '0', actualScore: '2', extraCredit: true }).ok).toBe(true);
   });
 
