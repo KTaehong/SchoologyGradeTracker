@@ -40,7 +40,7 @@ this repository.
 
 ## Build it for iPhone (Mac)
 
-Needs Xcode, Node.js 20+, and CocoaPods.
+Needs Xcode, Node.js 22.13+, and CocoaPods.
 
 ```bash
 cd mobile

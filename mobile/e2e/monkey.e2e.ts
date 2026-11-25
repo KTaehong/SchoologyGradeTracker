@@ -12,7 +12,7 @@
  */
 import type { Page } from '@playwright/test';
 
-import { answerDialogs, expect, hasAccount, signIn, test } from './support/app';
+import { answerDialogs, expect, hasAccount, inFront, signIn, test } from './support/app';
 
 // Kept in the environment, so the test worker uses the same seed as the runner.
 const SEED = Number((process.env.MONKEY_SEED ??= String(Date.now() % 1_000_000)));
@@ -56,7 +56,7 @@ const JUNK = [
 const TAPPABLE = '[role="button"], [role="tab"], [role="radio"], [role="switch"], [role="link"], a[href], input, textarea';
 
 async function visibleTargets(page: Page) {
-  const all = page.locator(TAPPABLE).filter({ visible: true });
+  const all = inFront(page.locator(TAPPABLE));
   const count = await all.count();
   return { all, count };
 }
@@ -84,7 +84,7 @@ test.describe('monkey test', () => {
       expect(words, `crash screen at ${where}`).not.toMatch(/Something went wrong|Unmatched Route|Uncaught Error/);
       const { count } = await visibleTargets(page);
       expect(count, `dead end (nothing to tap) at ${where}`).toBeGreaterThan(0);
-      const signedOut = await page.getByRole('button', { name: 'Create an account', exact: true }).filter({ visible: true }).count();
+      const signedOut = await inFront(page.getByRole('button', { name: 'Create an account', exact: true })).count();
       expect(signedOut, `signed out unexpectedly at ${where}`).toBe(0);
     };
 
@@ -94,7 +94,7 @@ test.describe('monkey test', () => {
       try {
         if (roll < 0.07) {
           // The header's back arrow (the browser's own Back could leave the app).
-          const back = page.getByRole('button', { name: /back$/i }).filter({ visible: true });
+          const back = inFront(page.getByRole('button', { name: /back$/i }));
           did = (await back.count()) > 0 ? 'Back' : 'Back (nowhere to go)';
           if ((await back.count()) > 0) await back.last().click({ timeout: 3000 });
         } else if (roll < 0.12) {

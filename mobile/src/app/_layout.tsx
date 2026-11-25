@@ -33,13 +33,14 @@ function ThemedNavigation() {
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack>
+      {/* Solid headers: from SDK 58, iOS 26 headers are see-through and cover the top of the screen. */}
+      <Stack screenOptions={{ headerTransparent: false }}>
         <Stack.Screen name="sign-in" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Not found' }} />
         <Stack.Screen name="new-password" options={{ title: 'Password', presentation: 'modal' }} />
-        <Stack.Protected guard={signedIn}>
+        <Stack.Protected guard={signedIn} redirectTo="/sign-in">
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
           <Stack.Screen name="add" options={{ title: 'Add grades', presentation: 'modal' }} />

@@ -52,22 +52,33 @@ export function answerDialogs(page: Page, answer: 'accept' | 'dismiss'): string[
   return seen;
 }
 
+/**
+ * What the student can see and reach. A tab or screen that is covered stays in
+ * the page as `inert`: it has a size, but nobody can tap it or hear it read.
+ */
+export function inFront(locator: Locator): Locator {
+  return locator.and(locator.page().locator(':not([inert], [inert] *)')).filter({ visible: true });
+}
+
 /** A button on the screen in front (earlier screens stay mounted underneath). */
 export function button(page: Page, name: string | RegExp): Locator {
-  return page.getByRole('button', { name, exact: typeof name === 'string' }).filter({ visible: true }).last();
+  return inFront(page.getByRole('button', { name, exact: typeof name === 'string' })).last();
 }
 
 export function field(page: Page, label: string | RegExp): Locator {
-  return page.getByLabel(label, { exact: typeof label === 'string' }).filter({ visible: true }).last();
+  return inFront(page.getByLabel(label, { exact: typeof label === 'string' })).last();
 }
 
 /** Text on the screen in front. */
 export function text(page: Page, value: string | RegExp): Locator {
-  return page.getByText(value).filter({ visible: true }).last();
+  return inFront(page.getByText(value)).last();
 }
 
 export async function openTab(page: Page, name: 'Home' | 'Grades' | 'Upcoming' | 'Settings') {
   await page.getByRole('tab', { name }).or(page.getByRole('link', { name })).first().click();
+  // The router switches a moment after the tap.
+  const title = name === 'Home' ? /^Good (morning|afternoon|evening)/ : name;
+  await expect(inFront(page.getByRole('heading', { name: title, level: 1, exact: true }))).toBeVisible();
 }
 
 /** Opens the app signed out (each test gets its own empty browser). */

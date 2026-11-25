@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, type TextInput } from 'react-native';
+import { StyleSheet, View, type TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -50,9 +50,9 @@ export default function SignInScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   /** An email waiting to be confirmed: offer to send the link again. */
   const [unconfirmed, setUnconfirmed] = useState<string | null>(null);
-  const usernameRef = useRef<TextInput>(null);
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const usernameRef = useRef<TextInputInstance>(null);
+  const emailRef = useRef<TextInputInstance>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
   /** True while a request is running, so a double tap or Enter cannot send two. */
   const running = useRef(false);
 
