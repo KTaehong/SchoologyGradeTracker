@@ -58,6 +58,11 @@ npm run lint
 npm test
 ```
 
+Screens can be unit-tested with React Native Testing Library (`render`,
+`fireEvent` and `renderHook` are async in v14: `await` them). Mock the
+gradebook and session hooks as `src/screens/__tests__/settings.test.tsx`
+does. Keep screen tests out of `src/app/`: every file there becomes a route.
+
 After changing a screen, a form, sign-in or sync, also test it like a user
 (the `test-like-a-user` skill in `.claude/skills/` says how):
 

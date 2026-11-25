@@ -92,6 +92,8 @@ steps that need your accounts. The earlier iOS pass is in
 - [ ] App Store Connect: privacy policy URL, support URL, App Privacy answers
       (Name, Email Address, User ID, Other User Content; linked to the user; app
       functionality only; no tracking), age rating, 6.9" and 6.5" screenshots.
+      The same four data types are declared in the app's privacy manifest
+      (`ios.privacyManifests` in `mobile/app.json`); keep the two in step.
 - [ ] App Review notes: give a test account (email + password), and say that
       account deletion is in Settings → Delete account.
 - [ ] Test the TestFlight build with the list in the iOS checklist.
