@@ -2,23 +2,35 @@ import { describe, expect, it, jest } from '@jest/globals';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ApiError } from '../errors';
-import { createRpcCaller, withTimeout } from '../rpc';
+import { createRpcCaller, REQUEST_TIMEOUT_MS, withTimeout } from '../rpc';
 
 type RpcResponse = { data: unknown; error: { code: string; message: string } | null };
 
 function fakeClient({
   signedIn = true,
   response,
-}: { signedIn?: boolean; response?: RpcResponse } = {}) {
-  const rpc = jest.fn(
-    async (_fn: string, _args?: object) => response ?? { data: null, error: null },
-  );
+  never = false,
+}: { signedIn?: boolean; response?: RpcResponse; never?: boolean } = {}) {
+  const signals: AbortSignal[] = [];
+  // Like supabase-js: rpc() returns a builder that can be awaited and given an abort signal.
+  const rpc = jest.fn((_fn: string, _args?: object) => {
+    const result: Promise<RpcResponse> = never
+      ? new Promise(() => undefined)
+      : Promise.resolve(response ?? { data: null, error: null });
+    return {
+      then: result.then.bind(result),
+      abortSignal(signal: AbortSignal) {
+        signals.push(signal);
+        return this;
+      },
+    };
+  });
   const getSession = jest.fn(async () => ({
     data: { session: signedIn ? { access_token: 'jwt', user: { id: 'ana' } } : null },
     error: null,
   }));
   const client = { rpc, auth: { getSession } } as unknown as SupabaseClient;
-  return { client, rpc, getSession };
+  return { client, rpc, getSession, signals };
 }
 
 describe('createRpcCaller', () => {
@@ -82,5 +94,25 @@ describe('createRpcCaller', () => {
 
   it('gives up on a server that never answers', async () => {
     await expect(withTimeout(new Promise(() => undefined), 5)).rejects.toMatchObject({ kind: 'network' });
+  });
+
+  it('cancels a request that takes too long, so it cannot arrive later', async () => {
+    jest.useFakeTimers();
+    try {
+      const { client, signals } = fakeClient({ never: true });
+      const result = createRpcCaller(() => client)('push_changes').catch((e: unknown) => e);
+      await jest.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+      await expect(result).resolves.toMatchObject({ kind: 'network' });
+      expect(signals).toHaveLength(1);
+      expect(signals[0].aborted).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not cancel a request that answered in time', async () => {
+    const { client, signals } = fakeClient();
+    await createRpcCaller(() => client)('pull_changes');
+    expect(signals[0].aborted).toBe(false);
   });
 });

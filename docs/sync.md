@@ -121,6 +121,16 @@ unsynced edit on a phone wins. Two phones editing the *same* assignment offline
 → the one that syncs last wins. For a one-student gradebook this is rare and
 easy to understand; field-by-field merging is not worth the complexity now.
 
+**A late request never overwrites a newer edit.** Each push carries the
+revision of the pull just before it (`push_changes(p_changes, p_base)`). A row
+that changed in the cloud after that pull is not saved but listed in the reply's
+`conflicts`; the phone keeps it unsent, pulls the newer version, and pushes
+again, so the order above still holds. This matters for a push that timed out
+(the app stops waiting after 60 seconds and cancels the request) but reached the
+server anyway: its pull is old, so it cannot replace what was saved since.
+Older app versions send no `p_base` and keep plain last-write-wins
+(migration `20261126001100_sync_conflicts_and_cleanup.sql`).
+
 Other cases:
 - **An edit beats a delete.** When another device deleted a class (or a period or
   category) and this phone has unsent edits anywhere in it, the whole class is

@@ -30,7 +30,7 @@ Status key: ⬜ not started · 🔄 in progress · ✅ done · ⏭️ cut/deferr
 | T3.1 What-If grades (F08) | 1.5 | | ⬜ | Nov 12 | | |
 | T3.2 Final-grade calculator (F09) | 1.5 | | ⬜ | Nov 15 | | |
 | T3.3 Semester grades (F10) | 1.5 | | ⬜ | Nov 18 | | |
-| T3.4 Opt-in cloud sync (F14) | 3.75 | | ⬜ | Nov 22 | | |
+| T3.4 Opt-in cloud sync (F14) | 3.75 | | ⬜ | Nov 22 | | Task name from the original plan: sync is now always on, with an account (no opt-in). |
 | T4.1 Full QA pass, iOS + Android | 1.5 | | ⬜ | Nov 29 | | |
 | T4.2 Bug-fix + polish | 1.5 | | ⬜ | Dec 2 | | |
 | T4.3 Release builds, iOS + Android | 1.5 | | ⬜ | Dec 3 | | |

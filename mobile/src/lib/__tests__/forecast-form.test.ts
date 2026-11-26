@@ -10,6 +10,10 @@ describe('parseScore', () => {
     ['8,5', 8.5],
     ['.5', 0.5],
     ['0', 0],
+    // Rounded to cents, as the cloud stores it.
+    ['18.555', 18.56],
+    ['33.333', 33.33],
+    ['0.001', 0],
   ])('reads %p as %p', (text, value) => {
     expect(parseScore(text)).toBe(value);
   });

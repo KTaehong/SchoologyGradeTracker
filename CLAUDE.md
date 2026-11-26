@@ -94,7 +94,9 @@ no database setup is needed. GitHub runs the same checks on every pull request
   revoke execute from `public, anon`; `supabase/tests/api_security_test.sql`
   fails if one is missed. A new table or function also needs its own test.
 - Database changes are new files in `supabase/migrations/` (never edit an
-  applied one), and must also be applied to the live project.
+  applied one), and must also be applied to the live project before the app
+  code that needs them is merged (steps: `docs/database/README.md`, "Applying a
+  migration"). `node supabase/check_live_migrations.mjs` lists any that are not.
 - The grade rules exist twice and must agree: `mobile/src/engine/` (on the
   phone, what the app shows) and `supabase/migrations/*grade_engine.sql` (on the
   server, not used by any screen). `npm run test:cloud` compares them on random

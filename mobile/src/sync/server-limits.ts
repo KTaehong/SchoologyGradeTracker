@@ -91,6 +91,8 @@ export function fitToServer(table: SyncTable, row: Record<string, unknown>): Rec
       break;
     }
     case 'upcoming_items':
+      // The feed parser always names an item; a blank title would still be refused.
+      if (typeof row.title !== 'string' || row.title.trim() === '') out.title = 'Untitled';
       break;
   }
   return out;

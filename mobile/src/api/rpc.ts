@@ -10,7 +10,10 @@ export type RpcCaller = (fn: string, args?: Record<string, unknown>) => Promise<
  * - fails fast with `not_signed_in` when there is no session, instead of
  *   sending a request the server will refuse;
  * - lets supabase-js attach (and, if needed, refresh) the access token;
- * - gives up after REQUEST_TIMEOUT_MS, so a dead connection cannot hang a sync;
+ * - gives up after REQUEST_TIMEOUT_MS, so a dead connection cannot hang a sync,
+ *   and cancels the request then, so it cannot reach the server later (a late
+ *   push could otherwise overwrite a newer edit; push_changes also refuses rows
+ *   changed after the phone's pull, for a request that is already on its way);
  * - turns errors into `ApiError`s.
  *
  * With `accountId`, calls are refused once someone else is signed in, so one
@@ -21,9 +24,16 @@ export type RpcCaller = (fn: string, args?: Record<string, unknown>) => Promise<
  */
 export const REQUEST_TIMEOUT_MS = 60_000;
 
-export function withTimeout<T>(work: PromiseLike<T>, ms: number = REQUEST_TIMEOUT_MS): Promise<T> {
+export function withTimeout<T>(
+  work: PromiseLike<T>,
+  ms: number = REQUEST_TIMEOUT_MS,
+  onTimeout?: () => void,
+): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new ApiError('network', 'The server took too long to answer.')), ms);
+    const timer = setTimeout(() => {
+      onTimeout?.();
+      reject(new ApiError('network', 'The server took too long to answer.'));
+    }, ms);
     Promise.resolve(work)
       .then(resolve, reject)
       .finally(() => clearTimeout(timer));
@@ -48,7 +58,10 @@ export function createRpcCaller(getClient: () => SupabaseClient, accountId?: str
 
     let response;
     try {
-      response = await withTimeout(client.rpc(fn, args));
+      const controller = new AbortController();
+      response = await withTimeout(client.rpc(fn, args).abortSignal(controller.signal), REQUEST_TIMEOUT_MS, () =>
+        controller.abort(),
+      );
     } catch (thrown) {
       if (thrown instanceof ApiError) throw thrown;
       throw new ApiError('network', thrown instanceof Error ? thrown.message : String(thrown));

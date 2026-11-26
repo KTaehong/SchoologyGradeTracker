@@ -46,9 +46,9 @@ begin
 
   update public.profiles set school_name = 'American Heritage School', graduation_year = 2027
    where id in (ana, ben, chris);
-  update public.user_settings set theme = 'dark', sync_enabled = true, onboarding_completed_at = now()
+  update public.user_settings set theme = 'dark', onboarding_completed_at = now()
    where student_id = ana;
-  update public.user_settings set sync_enabled = true, onboarding_completed_at = now()
+  update public.user_settings set onboarding_completed_at = now()
    where student_id in (ben, chris);
 
   insert into public.user_devices

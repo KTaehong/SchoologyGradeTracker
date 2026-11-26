@@ -12,8 +12,12 @@ export type Deletion = { table_name: string; row_id: string };
 
 export type ChangeSet = Partial<Record<SyncTable, WireRow[]>> & { deleted: Deletion[] };
 export type PullResult = ChangeSet & { revision: number };
-/** `skipped`: rows whose parent is not in the cloud (missing from older servers). */
-export type PushResult = { revision: number; skipped?: Deletion[] };
+/**
+ * `skipped`: rows whose parent is not in the cloud (missing from older servers).
+ * `conflicts`: rows changed in the cloud after the pull this push was based on;
+ * the server did not save them (missing from older servers).
+ */
+export type PushResult = { revision: number; skipped?: Deletion[]; conflicts?: Deletion[] };
 
 /** What a push sent, so exactly those versions can be marked as synced afterwards. */
 export type SentRow = { table: SyncTable; id: string; dirty: number };
@@ -70,15 +74,17 @@ export async function collectLocalChanges(
 /**
  * After a successful push: rows not changed again meanwhile are now in sync,
  * and pushed deletes can be forgotten. Rows the server skipped stay unsent (see
- * repairSkipped). Returns whether anything needs to be sent again.
+ * repairSkipped). Rows in `conflicts` stay unsent too: the next sync pulls the
+ * newer cloud version first and then sends them again. Returns whether
+ * anything needs to be sent again.
  */
 export async function markPushed(
   db: SqlDb,
   sent: SentRow[],
-  skipped: Deletion[] = [],
+  { skipped = [], conflicts = [] }: Pick<PushResult, 'skipped' | 'conflicts'> = {},
   check?: Check,
 ): Promise<boolean> {
-  const notSaved = new Set(skipped.map((s) => `${s.table_name}:${s.row_id}`));
+  const notSaved = new Set([...skipped, ...conflicts].map((s) => `${s.table_name}:${s.row_id}`));
   return db.transaction(async () => {
     await check?.();
     for (const row of sent) {
@@ -88,7 +94,7 @@ export async function markPushed(
     for (const table of SYNC_TABLES) {
       await db.run(`delete from ${table} where deleted = 1 and dirty = 0`);
     }
-    let again = false;
+    let again = conflicts.length > 0;
     for (const row of skipped) {
       if (isSyncTable(row.table_name) && (await repairSkipped(db, row.table_name, row.row_id))) {
         again = true;

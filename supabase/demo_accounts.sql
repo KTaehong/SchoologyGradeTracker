@@ -269,7 +269,7 @@ begin
 
     update public.profiles set school_name = 'American Heritage School', graduation_year = 2027
      where id = v_id;
-    update public.user_settings set sync_enabled = true, onboarding_completed_at = now()
+    update public.user_settings set onboarding_completed_at = now()
      where student_id = v_id;
 
     -- 2. The gradebook (same steps as load_sample_gradebook).

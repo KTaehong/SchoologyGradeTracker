@@ -20,6 +20,11 @@ describe('calendarDate', () => {
 });
 
 describe('fitToServer', () => {
+  it('names a calendar item that has no title', () => {
+    expect(fitToServer('upcoming_items', { id: 'u', title: ' ', due_at: '2026-12-01T00:00:00Z' }).title).toBe('Untitled');
+    expect(fitToServer('upcoming_items', { id: 'u', title: 'Essay', due_at: '2026-12-01T00:00:00Z' }).title).toBe('Essay');
+  });
+
   it('fixes every assignment value the server would refuse', () => {
     expect(
       fitToServer('assignments', {
