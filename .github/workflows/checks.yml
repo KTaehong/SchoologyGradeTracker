@@ -48,3 +48,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash supabase/tests/run_local.sh
+      - run: node --test supabase/tests/check_live_migrations.test.mjs

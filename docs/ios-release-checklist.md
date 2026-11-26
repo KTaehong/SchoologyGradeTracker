@@ -1,6 +1,8 @@
 # iOS release checklist
 
 > The current checklist for both stores is [store-release-checklist.md](store-release-checklist.md).
+> **History:** this page records the iOS check of 7 November 2026. Its test counts and
+> findings are from that day; the current numbers are in the latest code review.
 
 What was checked on Windows (Nov 7, 2026), what was fixed, and what still needs
 a person with the Apple Developer account and the Supabase dashboard.

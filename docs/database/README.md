@@ -96,7 +96,6 @@ erDiagram
     USER_SETTINGS {
         uuid student_id PK
         enum theme "system, light, dark"
-        boolean sync_enabled
         numeric default_exam_weight "20"
         timestamptz onboarding_completed_at
     }
@@ -471,6 +470,26 @@ The app needs the **Project URL** and the **anon public key** from
 which is committed so a fresh clone is connected. The anon key is safe in the
 app because RLS protects the data. Never put the **service_role** key or the
 database password in the app or in this repository.
+
+### Applying a migration
+
+Every new file in `supabase/migrations/` must also be applied to the live
+project, **before** an app version that needs it is merged or built:
+
+1. Run it against the live database inside `begin; … rollback;` with its test
+   file from `supabase/tests/`, and check that every check prints `ok`.
+2. Apply it (SQL editor, or the Supabase MCP `apply_migration`).
+3. Make the live history use the file's version (the number before the first
+   `_`), so `supabase db push` and the check below agree:
+   `update supabase_migrations.schema_migrations set version = '<file version>'
+   where name = '<name without version>';` (or `supabase migration repair`).
+4. Run `api_security_test.sql` on live (it rolls back).
+
+`node supabase/check_live_migrations.mjs` (with `SUPABASE_ACCESS_TOKEN` set to a
+personal access token) lists any file that is not applied live. GitHub runs it
+on every push to `main` that changes a migration and once a day
+(`.github/workflows/live-migrations.yml`, repository secret
+`SUPABASE_ACCESS_TOKEN`; skipped when the secret is not set).
 
 ### Running the tests locally (optional)
 With PostgreSQL 15+ installed: `supabase/tests/run_local.sh`. It creates a

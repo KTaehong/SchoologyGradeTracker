@@ -30,7 +30,8 @@ import {
 
 export type SyncTransport = {
   pull(since: number): Promise<PullResult>;
-  push(changes: ChangeSet): Promise<PushResult>;
+  /** `base`: the revision of the pull just before; rows changed in the cloud after it are not overwritten. */
+  push(changes: ChangeSet, base: number): Promise<PushResult>;
 };
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
@@ -158,8 +159,8 @@ export class SyncEngine {
 
       const local = await collectLocalChanges(db, this.check);
       if (local) {
-        const { skipped } = await transport.push(local.changes);
-        const sendAgain = await markPushed(db, local.sent, skipped, this.check);
+        const result = await transport.push(local.changes, pulled.revision);
+        const sendAgain = await markPushed(db, local.sent, result, this.check);
         if (sendAgain && !this.resending) {
           this.resending = true;
           this.again = true;

@@ -1,0 +1,33 @@
+# Fails when a migration is not applied to the live Supabase project
+# (review finding N1). Read only: it lists the live migration history.
+# On a pull request that adds a migration it fails until the migration is
+# applied live, so "apply before merging" (CLAUDE.md) is checked before merge.
+# Needs the repository secret SUPABASE_ACCESS_TOKEN; without it, it is skipped.
+name: Live migrations
+
+on:
+  pull_request:
+    paths: ['supabase/migrations/**', 'supabase/check_live_migrations.mjs']
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**', 'supabase/check_live_migrations.mjs']
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: Every migration is applied live
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node supabase/check_live_migrations.mjs
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

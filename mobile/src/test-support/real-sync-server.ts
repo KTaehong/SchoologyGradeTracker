@@ -93,8 +93,8 @@ export class RealSyncServer {
   transport(studentId: string): SyncTransport {
     return {
       pull: async (since) => (await this.rpc(studentId, 'pull_changes', { p_since: since })) as PullResult,
-      push: async (changes: ChangeSet) =>
-        (await this.rpc(studentId, 'push_changes', { p_changes: changes })) as PushResult,
+      push: async (changes: ChangeSet, base: number) =>
+        (await this.rpc(studentId, 'push_changes', { p_changes: changes, p_base: base })) as PushResult,
     };
   }
 

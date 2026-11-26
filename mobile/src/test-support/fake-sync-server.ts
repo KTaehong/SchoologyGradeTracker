@@ -1,7 +1,8 @@
 /**
  * Test helper: an in-memory stand-in for pull_changes / push_changes with the
  * same rules as the real ones in supabase/migrations/ (per-row revisions,
- * tombstones, orphans skipped and reported, deletes cascade).
+ * tombstones, orphans skipped and reported, deletes cascade, rows changed
+ * after the phone's pull refused as conflicts).
  */
 import { ApiError } from '@/api/errors';
 import { CHILDREN, isSyncTable, PARENT, SYNC_TABLES, type SyncTable } from '@/db/tables';
@@ -47,12 +48,24 @@ export class FakeSyncServer {
           .map(({ table_name, row_id }) => ({ table_name, row_id }));
         return structuredClone(result);
       },
-      push: async (changes: ChangeSet) => {
+      push: async (changes: ChangeSet, base?: number) => {
         check();
         this.pushes++;
         const skipped: Deletion[] = [];
+        // Rows changed here after the phone's pull are not overwritten (push_changes, p_base).
+        const conflicts: Deletion[] = [];
+        const newer = (table: SyncTable, id: string, isDelete: boolean) => {
+          if (base === undefined) return false;
+          const live = this.rows.get(table)!.get(id)?.revision ?? 0;
+          const gone = isDelete ? 0 : (this.tombstones.get(`${table}:${id}`)?.revision ?? 0);
+          return Math.max(live, gone) > base;
+        };
         for (const table of SYNC_TABLES) {
           for (const row of changes[table] ?? []) {
+            if (newer(table, String(row.id), false)) {
+              conflicts.push({ table_name: table, row_id: String(row.id) });
+              continue;
+            }
             const parent = PARENT[table];
             const saved = structuredClone(row);
             if (parent && row[parent.column] && !this.rows.get(parent.table)!.has(String(row[parent.column]))) {
@@ -65,9 +78,14 @@ export class FakeSyncServer {
           }
         }
         for (const d of changes.deleted) {
-          if (isSyncTable(d.table_name)) this.remove(d.table_name, d.row_id);
+          if (!isSyncTable(d.table_name)) continue;
+          if (newer(d.table_name, d.row_id, true)) {
+            conflicts.push(d);
+            continue;
+          }
+          this.remove(d.table_name, d.row_id);
         }
-        return { revision: this.revision, skipped };
+        return { revision: this.revision, skipped, conflicts };
       },
     };
   }

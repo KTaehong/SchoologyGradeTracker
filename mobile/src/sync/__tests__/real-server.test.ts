@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { ApiError } from '@/api/errors';
 import { createGradesApi } from '@/test-support/grades-api';
 import { createSampleGradebook } from '@/data/sample-gradebook';
 import {
@@ -239,6 +240,144 @@ describeCloud('sync with the real server', () => {
       expect(kept?.periods.flatMap((p) => p.categories.flatMap((c) => c.assignments))).toHaveLength(
         course.periods.flatMap((p) => p.categories.flatMap((c) => c.assignments)).length,
       );
+    }
+  });
+
+  it('does not let a push that timed out overwrite a newer edit when it arrives late', async () => {
+    const student = await newStudent();
+    const db = await createTestDatabase();
+    const real = server.transport(student);
+    let held: Parameters<typeof real.push> | null = null;
+    let holdNext = false;
+    // A held push "times out": the phone gives up, but the request is still on its way.
+    const transport = {
+      pull: real.pull,
+      push: async (...args: Parameters<typeof real.push>) => {
+        if (holdNext) {
+          holdNext = false;
+          held = args;
+          throw new ApiError('network', 'The server took too long to answer.');
+        }
+        return real.push(...args);
+      },
+    };
+    const engine = new SyncEngine({ db, transport });
+    await attachAccount(db, student);
+    await insertCourses(db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await engine.sync();
+    const item = (await readCourses(db))[0].periods[0].categories[0].assignments[0];
+
+    await updateAssignment(db, item.id, { ...item, actualScore: 80 });
+    holdNext = true;
+    await engine.sync(); // times out
+    await updateAssignment(db, item.id, { ...item, actualScore: 90 });
+    await engine.sync(); // the newer edit reaches the cloud
+    expect(held).not.toBeNull();
+    const late = await real.push(...held!); // the old request arrives after all
+    expect(late.conflicts).toEqual([{ table_name: 'assignments', row_id: item.id }]);
+    await engine.sync();
+
+    const score = async () =>
+      (await readCourses(db))[0].periods[0].categories[0].assignments.find((a) => a.id === item.id)?.actualScore;
+    expect(await score()).toBe(90);
+    expect(
+      await server.query('select actual_score::float as s from public.assignments where id = $1', [item.id]),
+    ).toEqual([{ s: 90 }]);
+  });
+
+  it('does not let a late class delete remove an edit made inside the class meanwhile', async () => {
+    const student = await newStudent();
+    const b = await phone(student);
+    const db = await createTestDatabase();
+    const real = server.transport(student);
+    let held: Parameters<typeof real.push> | null = null;
+    let holdNext = false;
+    const engine = new SyncEngine({
+      db,
+      transport: {
+        pull: real.pull,
+        push: async (...args: Parameters<typeof real.push>) => {
+          if (holdNext) {
+            holdNext = false;
+            held = args;
+            throw new ApiError('network', 'The server took too long to answer.');
+          }
+          return real.push(...args);
+        },
+      },
+    });
+    await attachAccount(db, student);
+    await insertCourses(db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await engine.sync();
+    await b.sync();
+    const course = (await readCourses(b.db))[0];
+    const item = course.periods[0].categories[0].assignments[0];
+
+    await deleteCourse(db, course.id);
+    holdNext = true;
+    await engine.sync(); // the delete times out, but is on its way
+    await updateAssignment(b.db, item.id, { ...item, title: 'Regraded' });
+    await b.sync(); // the edit reaches the cloud first
+    const late = await real.push(...held!);
+    expect(late.conflicts).toContainEqual({ table_name: 'courses', row_id: course.id });
+    await engine.sync();
+    await b.sync();
+
+    const count = (c: { periods: { categories: { assignments: unknown[] }[] }[] } | undefined) =>
+      c?.periods.flatMap((p) => p.categories.flatMap((k) => k.assignments)).length;
+    for (const phoneDb of [db, b.db]) {
+      const kept = (await readCourses(phoneDb)).find((c) => c.id === course.id);
+      expect(kept?.periods[0].categories[0].assignments[0].title).toBe('Regraded');
+      // The whole class, not just the edited part.
+      expect(count(kept)).toBe(count(course));
+    }
+    expect(
+      await server.query(
+        `select count(*)::int as n from public.assignments a
+           join public.categories k on k.id = a.category_id
+           join public.grading_periods p on p.id = k.period_id
+          where p.course_id = $1`,
+        [course.id],
+      ),
+    ).toEqual([{ n: count(course) }]);
+  });
+
+  it('sends a row again when another phone changed it between this pull and push', async () => {
+    const student = await newStudent();
+    const a = await phone(student);
+    const b = await phone(student);
+    await insertCourses(a.db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await a.sync();
+    await b.sync();
+    const item = (await readCourses(a.db))[0].periods[0].categories[0].assignments[0];
+    await updateAssignment(a.db, item.id, { ...item, actualScore: 70 });
+    await updateAssignment(b.db, item.id, { ...item, actualScore: 75 });
+
+    // B's push lands right after A's pull.
+    const real = server.transport(student);
+    let raced = false;
+    const engine = new SyncEngine({
+      db: a.db,
+      transport: {
+        pull: async (since) => {
+          const result = await real.pull(since);
+          if (!raced) {
+            raced = true;
+            await b.sync();
+          }
+          return result;
+        },
+        push: real.push,
+      },
+    });
+    await engine.sync();
+    expect(engine.getStatus()).toMatchObject({ state: 'idle', pending: 0, error: null });
+    await b.sync();
+    // A synced last, so A's score wins on both phones and in the cloud.
+    for (const db of [a.db, b.db]) {
+      expect(
+        (await readCourses(db))[0].periods[0].categories[0].assignments.find((x) => x.id === item.id)?.actualScore,
+      ).toBe(70);
     }
   });
 

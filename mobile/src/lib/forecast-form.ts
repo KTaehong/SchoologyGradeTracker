@@ -3,19 +3,23 @@
  * student sees a clear message right away.
  */
 import type { NewForecast } from '@/engine/grade-types';
-import { MAX_SCORE, NAME_LIMITS } from '@/sync/server-limits';
+import { MAX_SCORE, NAME_LIMITS, toCents } from '@/sync/server-limits';
 
 import { DUE_DATE_ERROR, parseDueDate } from './due-date';
 
 export type FormResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
-/** A number typed by the student: digits with an optional `.` or `,` decimal. */
+/**
+ * A number typed by the student: digits with an optional `.` or `,` decimal.
+ * Rounded to cents, as the cloud stores it, so what the phone shows after a
+ * sync is what the student saw when saving (18.555 is 18.56 from the start).
+ */
 export function parseScore(text: string): number | null {
   const trimmed = text.trim().replace(',', '.');
   if (!/^\d+(\.\d+)?$|^\.\d+$/.test(trimmed)) {
     return null;
   }
-  return Number(trimmed);
+  return toCents(Number(trimmed));
 }
 
 /**

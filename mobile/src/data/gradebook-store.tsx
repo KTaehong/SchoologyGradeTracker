@@ -26,6 +26,7 @@ import { AppState } from 'react-native';
 
 import { signOut as apiSignOut } from '@/api/auth';
 import { getSupabase, isApiConfigured } from '@/api/client';
+import { deleteMyAccount } from '@/api/delete-account';
 import type { CourseGrades, NewForecast } from '@/engine/grade-types';
 import { createRpcCaller } from '@/api/rpc';
 import { useSession } from '@/api/use-session';
@@ -81,6 +82,7 @@ import { createSupabaseTransport, watchRemoteChanges } from '@/sync/supabase-syn
 import { ACCOUNT_KEY, SyncEngine, type SyncStatus } from '@/sync/sync-engine';
 
 import { createSampleGradebook } from './sample-gradebook';
+import { deleteAccountHere, signOutHere, type LeaveAccountDeps } from './leave-account';
 import { removeLegacyGradebook } from './storage';
 import type { UpcomingItem } from './types';
 
@@ -148,15 +150,7 @@ type GradebookContextValue = {
   deleteAccount: () => Promise<void>;
 };
 
-/** Signing out now would lose changes that are only on this phone. */
-export class UnsentChangesError extends Error {
-  constructor(readonly count: number) {
-    super(
-      `${count} ${count === 1 ? 'change has' : 'changes have'} not reached the cloud yet. Connect to the internet and try again.`,
-    );
-    this.name = 'UnsentChangesError';
-  }
-}
+export { UnsentChangesError } from './leave-account';
 
 const GradebookContext = createContext<GradebookContextValue | null>(null);
 
@@ -404,6 +398,18 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
   }, [state, userId, shownAccount, sync]);
 
   const value = useMemo<GradebookContextValue>(() => {
+    const leaveDeps = (): LeaveAccountDeps => ({
+      // Last chance to send changes made here.
+      sync: engineRef.current ? () => engineRef.current!.sync() : undefined,
+      countUnsent: db ? () => countPendingChanges(db) : undefined,
+      signOut: apiSignOut,
+      forgetLocalCopy: async () => {
+        if (db) {
+          await detachAccount(db);
+          await reload(db);
+        }
+      },
+    });
     const edit = async (action: (database: SqlDb) => Promise<void>) => {
       if (!db) throw new Error('The gradebook is still opening. Try again in a moment.');
       await action(db);
@@ -499,33 +505,18 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
         if (engineRef.current) await engineRef.current.sync();
         else if (db) await reload(db);
       },
-      signOut: async (discardUnsent = false) => {
-        // Last chance to send changes made here.
-        if (engineRef.current) await engineRef.current.sync();
-        if (db && !discardUnsent) {
-          const unsent = await countPendingChanges(db);
-          if (unsent > 0) throw new UnsentChangesError(unsent);
-        }
-        // This phone only: signing out here must not sign the student out on
-        // their other devices (which may have their own unsent changes).
-        await apiSignOut('local');
-        if (db) {
-          await detachAccount(db);
-          await reload(db);
-        }
-      },
-      deleteAccount: async () => {
-        await createRpcCaller(getSupabase)('delete_my_account');
-        if (pushTimer.current) clearTimeout(pushTimer.current);
-        if (userId) await forgetCalendarLink(userId).catch(() => undefined);
-        // The account is gone, so the server may refuse the sign-out; the
-        // phone forgets the session either way.
-        await apiSignOut().catch(() => undefined);
-        if (db) {
-          await detachAccount(db);
-          await reload(db);
-        }
-      },
+      signOut: (discardUnsent = false) => signOutHere(leaveDeps(), discardUnsent),
+      deleteAccount: () =>
+        deleteAccountHere({
+          ...leaveDeps(),
+          deleteAccount: () => deleteMyAccount(createRpcCaller(getSupabase), getSupabase()),
+          cancelPendingSync: () => {
+            if (pushTimer.current) clearTimeout(pushTimer.current);
+          },
+          forgetCalendarLink: async () => {
+            if (userId) await forgetCalendarLink(userId);
+          },
+        }),
     };
   }, [shownState, calendar, calendarAccount, sync, online, db, userId, changed, reload, loadFeed]);
 

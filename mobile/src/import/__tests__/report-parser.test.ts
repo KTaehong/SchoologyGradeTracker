@@ -120,6 +120,13 @@ describe('parseReportLines', () => {
     ]);
   });
 
+  it('rounds scores and weights to cents, as the cloud stores them', () => {
+    const { courses } = parseReportLines(['Physics: P3', 'Quarter 1 (33.333%)', 'Lab 1 18.555 / 20.004'], ids());
+    const period = courses[0].periods[0];
+    expect(period.weight).toBe(33.33);
+    expect(period.categories[0].assignments[0]).toMatchObject({ actualScore: 18.56, maxScore: 20 });
+  });
+
   it('drops headings that never got any assignments', () => {
     const { courses } = parseReportLines(['Grades', 'Some Club: Members', 'Quarter 1 (100%)'], ids());
     expect(courses).toEqual([]);
