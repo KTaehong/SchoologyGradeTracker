@@ -3,7 +3,7 @@
  * student sees a clear message right away.
  */
 import type { NewForecast } from '@/engine/grade-types';
-import { MAX_SCORE, NAME_LIMITS } from '@/sync/server-limits';
+import { MAX_SCORE, NAME_LIMITS, toCents } from '@/sync/server-limits';
 
 import { DUE_DATE_ERROR, parseDueDate } from './due-date';
 
@@ -19,7 +19,7 @@ export function parseScore(text: string): number | null {
   if (!/^\d+(\.\d+)?$|^\.\d+$/.test(trimmed)) {
     return null;
   }
-  return Math.round(Number(trimmed) * 100) / 100;
+  return toCents(Number(trimmed));
 }
 
 /**

@@ -285,6 +285,63 @@ describeCloud('sync with the real server', () => {
     ).toEqual([{ s: 90 }]);
   });
 
+  it('does not let a late class delete remove an edit made inside the class meanwhile', async () => {
+    const student = await newStudent();
+    const b = await phone(student);
+    const db = await createTestDatabase();
+    const real = server.transport(student);
+    let held: Parameters<typeof real.push> | null = null;
+    let holdNext = false;
+    const engine = new SyncEngine({
+      db,
+      transport: {
+        pull: real.pull,
+        push: async (...args: Parameters<typeof real.push>) => {
+          if (holdNext) {
+            holdNext = false;
+            held = args;
+            throw new ApiError('network', 'The server took too long to answer.');
+          }
+          return real.push(...args);
+        },
+      },
+    });
+    await attachAccount(db, student);
+    await insertCourses(db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await engine.sync();
+    await b.sync();
+    const course = (await readCourses(b.db))[0];
+    const item = course.periods[0].categories[0].assignments[0];
+
+    await deleteCourse(db, course.id);
+    holdNext = true;
+    await engine.sync(); // the delete times out, but is on its way
+    await updateAssignment(b.db, item.id, { ...item, title: 'Regraded' });
+    await b.sync(); // the edit reaches the cloud first
+    const late = await real.push(...held!);
+    expect(late.conflicts).toContainEqual({ table_name: 'courses', row_id: course.id });
+    await engine.sync();
+    await b.sync();
+
+    const count = (c: { periods: { categories: { assignments: unknown[] }[] }[] } | undefined) =>
+      c?.periods.flatMap((p) => p.categories.flatMap((k) => k.assignments)).length;
+    for (const phoneDb of [db, b.db]) {
+      const kept = (await readCourses(phoneDb)).find((c) => c.id === course.id);
+      expect(kept?.periods[0].categories[0].assignments[0].title).toBe('Regraded');
+      // The whole class, not just the edited part.
+      expect(count(kept)).toBe(count(course));
+    }
+    expect(
+      await server.query(
+        `select count(*)::int as n from public.assignments a
+           join public.categories k on k.id = a.category_id
+           join public.grading_periods p on p.id = k.period_id
+          where p.course_id = $1`,
+        [course.id],
+      ),
+    ).toEqual([{ n: count(course) }]);
+  });
+
   it('sends a row again when another phone changed it between this pull and push', async () => {
     const student = await newStudent();
     const a = await phone(student);

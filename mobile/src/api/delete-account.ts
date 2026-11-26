@@ -27,6 +27,9 @@ export async function accountIsGone(client: SupabaseClient): Promise<boolean> {
   try {
     const { data, error } = await client.auth.getUser();
     if (data.user || !error) return false;
+    // The session existed when the delete was sent (the RPC caller checks), so
+    // a missing session now means the server ended it: deleting the account
+    // deletes its sessions.
     if (isAuthSessionMissingError(error)) return true;
     const code = (error as { code?: string }).code;
     return code === 'user_not_found' || code === 'session_not_found' || error.status === 401 || error.status === 403;

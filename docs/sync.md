@@ -125,7 +125,10 @@ easy to understand; field-by-field merging is not worth the complexity now.
 revision of the pull just before it (`push_changes(p_changes, p_base)`). A row
 that changed in the cloud after that pull is not saved but listed in the reply's
 `conflicts`; the phone keeps it unsent, pulls the newer version, and pushes
-again, so the order above still holds. This matters for a push that timed out
+again, so the order above still holds. A delete of a class, period or category
+is also refused when anything inside it changed after the pull (migration
+`20261126001200_conflicts_cover_children.sql`), so "an edit beats a delete"
+holds for late deletes too. This matters for a push that timed out
 (the app stops waiting after 60 seconds and cancels the request) but reached the
 server anyway: its pull is old, so it cannot replace what was saved since.
 Older app versions send no `p_base` and keep plain last-write-wins
@@ -171,6 +174,11 @@ Other cases:
   duplicates, and that one student cannot read or overwrite another's rows.
 
 ## Known limits
+
+- A row created on a phone whose push times out, then deleted before that push
+  reaches the server, can come back: the delete matched nothing in the cloud, so
+  no tombstone stops the late insert. It needs a request delayed by more than a
+  minute and a delete in between, so it is accepted for now.
 
 - Web: expo-sqlite runs on WebAssembly and needs a cross-origin-isolated page;
   `metro.config.js` sets this up for the dev server. Static web export is off

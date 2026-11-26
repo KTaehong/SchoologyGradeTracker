@@ -48,6 +48,9 @@ function name(value: unknown, limit: number, fallback: string): string {
   return text.length > 0 ? text : fallback;
 }
 
+/** Rounded to cents, as the server's numeric(…, 2) columns store it. */
+export const toCents = (n: number): number => Math.round(n * 100) / 100;
+
 /**
  * Between 0 and `max`, rounded to cents as the server's numeric(…, 2) columns
  * store it. Rounding here matters: the server checks the stored value, so 0.001
@@ -57,7 +60,7 @@ function clamp(value: unknown, max: number): number | null {
   if (value === null || value === undefined) return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
-  return Math.round(Math.min(Math.max(n, 0), max) * 100) / 100;
+  return toCents(Math.min(Math.max(n, 0), max));
 }
 
 /** A copy of `row` that the server accepts. */

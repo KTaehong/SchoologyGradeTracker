@@ -11,9 +11,9 @@ export type RpcCaller = (fn: string, args?: Record<string, unknown>) => Promise<
  *   sending a request the server will refuse;
  * - lets supabase-js attach (and, if needed, refresh) the access token;
  * - gives up after REQUEST_TIMEOUT_MS, so a dead connection cannot hang a sync,
- *   and cancels the request then, so it cannot reach the server later (a late
- *   push could otherwise overwrite a newer edit; push_changes also refuses rows
- *   changed after the phone's pull, for a request that is already on its way);
+ *   and cancels the request then. Cancelling only stops a request that has not
+ *   reached the server yet; one the server already has still runs, which is why
+ *   push_changes also refuses rows changed after the phone's pull;
  * - turns errors into `ApiError`s.
  *
  * With `accountId`, calls are refused once someone else is signed in, so one

@@ -22,7 +22,7 @@ import type {
   GradePeriod,
   PeriodKind,
 } from '@/engine/types';
-import { calendarDate, clipText, MAX_SCORE, MAX_WEIGHT, NAME_LIMITS } from '@/sync/server-limits';
+import { calendarDate, clipText, MAX_SCORE, MAX_WEIGHT, NAME_LIMITS, toCents } from '@/sync/server-limits';
 
 // ---------------------------------------------------------------------------
 // HTML → lines
@@ -151,7 +151,7 @@ function readHeading(line: string): { name: string; weight: number | null } {
   const weight = WEIGHT.exec(line);
   const beforeWeight = weight ? line.slice(0, weight.index) : line;
   const name = beforeWeight.replace(TRAILING_SUMMARY, '').replace(/[:\s]+$/, '').trim();
-  return { name, weight: weight ? Math.min(Number(weight[1]), MAX_WEIGHT) : null };
+  return { name, weight: weight ? toCents(Math.min(Number(weight[1]), MAX_WEIGHT)) : null };
 }
 
 function periodKind(name: string): PeriodKind {
@@ -272,9 +272,10 @@ export function parseReportLines(lines: string[], newId: () => string): ReportSu
       if (title.length === 0) continue;
       lastPlain = null;
       const excused = EXCUSED.test(rest);
-      const max = score ? Math.min(Number(score.max), MAX_SCORE) : 0;
+      // Rounded to cents like the cloud, so a sync does not change what is shown.
+      const max = score ? toCents(Math.min(Number(score.max), MAX_SCORE)) : 0;
       const earned =
-        score?.earned && !/^[-–—]+$/.test(score.earned) ? Math.min(Number(score.earned), MAX_SCORE) : null;
+        score?.earned && !/^[-–—]+$/.test(score.earned) ? toCents(Math.min(Number(score.earned), MAX_SCORE)) : null;
       // No points possible and nothing earned (a row with only a due date, or
       // "— / 0"): it cannot change a grade, and the cloud cannot store it.
       if (max <= 0 && !(earned !== null && earned > 0)) continue;

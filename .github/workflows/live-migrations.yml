@@ -1,9 +1,13 @@
-# Fails when a migration on main is not applied to the live Supabase project
+# Fails when a migration is not applied to the live Supabase project
 # (review finding N1). Read only: it lists the live migration history.
+# On a pull request that adds a migration it fails until the migration is
+# applied live, so "apply before merging" (CLAUDE.md) is checked before merge.
 # Needs the repository secret SUPABASE_ACCESS_TOKEN; without it, it is skipped.
 name: Live migrations
 
 on:
+  pull_request:
+    paths: ['supabase/migrations/**', 'supabase/check_live_migrations.mjs']
   push:
     branches: [main]
     paths: ['supabase/migrations/**', 'supabase/check_live_migrations.mjs']

@@ -13,7 +13,7 @@
  * Plain functions with no phone APIs, so all of it is tested in Jest.
  */
 
-import { calendarDate } from '@/sync/server-limits';
+import { calendarDate, toCents } from '@/sync/server-limits';
 
 export type RowStatus = 'graded' | 'missing' | 'excused' | 'ungraded';
 
@@ -68,9 +68,10 @@ const PERCENT_OR_LETTER = /^(?:\d+(?:\.\d+)?\s*%|[A-F][+-]?|\(?\d+(?:\.\d+)?%\)?
 const NOISE =
   /^(?:grades?|course grades?|grade|score|due|due date|assignment|assignments|comments?|materials|updates|members|course options|overall|show all|print|\d{1,2}:\d{2}(?:\s*[ap]m)?|[|•·.,:;\-–—_]+)$/i;
 
+/** A number read from the screen, rounded to cents like the cloud stores it. */
 function toNumber(text: string): number {
   const fixed = text.replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(',', '.');
-  return Number(fixed);
+  return toCents(Number(fixed));
 }
 
 function readScore(earnedText: string, maxText: string): Score | null {

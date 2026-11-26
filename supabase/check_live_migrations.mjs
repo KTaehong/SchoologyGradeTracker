@@ -25,7 +25,7 @@ const files = readdirSync(dir)
   .sort()
   .map((f) => ({ version: f.split('_')[0], file: f }));
 
-/** The pure comparison, exported for the test. */
+/** The pure comparison (tested in supabase/tests/check_live_migrations.test.mjs). */
 export function compare(fileList, liveVersions) {
   const live = new Set(liveVersions);
   const known = new Set(fileList.map((f) => f.version));

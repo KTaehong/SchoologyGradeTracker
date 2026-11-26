@@ -34,6 +34,11 @@ describe('parseScreenshot', () => {
     expect(result.needsReview).toBe(false);
   });
 
+  it('rounds scores to cents, as the cloud stores them', () => {
+    const result = parseScreenshot(['Tests (40%)', 'Unit 1 Test', '18.555 / 20.004']);
+    expect(result.rows[0]).toMatchObject({ earned: 18.56, max: 20 });
+  });
+
   it('pairs a column of names with a column of scores (Android text blocks)', () => {
     const result = parseScreenshot(
       toLines(['Quizzes (30%)\nQuiz 1\nQuiz 2\nQuiz 3', '18 / 20\nMissing\n—']),
