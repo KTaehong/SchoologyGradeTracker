@@ -48,6 +48,10 @@ async function main() {
     process.exit(1);
   }
   const history = await response.json();
+  if (!Array.isArray(history)) {
+    console.error(`Unexpected answer from the Management API: ${JSON.stringify(history).slice(0, 200)}`);
+    process.exit(1);
+  }
   const { missing, extra } = compare(
     files,
     history.map((m) => String(m.version)),
