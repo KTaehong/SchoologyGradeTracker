@@ -217,6 +217,49 @@ describeCloud('sync with the real server', () => {
     expect(await grades(b.db)).toEqual(before);
   });
 
+  it('keeps a whole class also when the edit reaches the cloud before the delete', async () => {
+    const student = await newStudent();
+    const a = await phone(student);
+    const b = await phone(student);
+    await insertCourses(a.db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await a.sync();
+    await b.sync();
+    const course = (await readCourses(b.db))[0];
+    const item = course.periods[0].categories[0].assignments[0];
+    // Both offline: B regrades an assignment, A deletes the class. B syncs first.
+    await updateAssignment(b.db, item.id, { ...item, title: 'Regraded' });
+    await deleteCourse(a.db, course.id);
+    await b.sync();
+    await a.sync();
+    await b.sync();
+    await a.sync();
+    for (const db of [a.db, b.db]) {
+      const kept = (await readCourses(db)).find((c) => c.id === course.id);
+      expect(kept?.periods[0].categories[0].assignments[0].title).toBe('Regraded');
+      expect(kept?.periods.flatMap((p) => p.categories.flatMap((c) => c.assignments))).toHaveLength(
+        course.periods.flatMap((p) => p.categories.flatMap((c) => c.assignments)).length,
+      );
+    }
+  });
+
+  it('lets a phone delete a class it edited itself before', async () => {
+    // The phone's own pushed edit comes back in its next pull; that is not
+    // someone else's edit, so it must not undo the delete.
+    const student = await newStudent();
+    const a = await phone(student);
+    await insertCourses(a.db, createSampleGradebook(randomUUID, new Date(2026, 9, 6)).courses, 'manual');
+    await a.sync();
+    const course = (await readCourses(a.db))[0];
+    const item = course.periods[0].categories[0].assignments[0];
+    await updateAssignment(a.db, item.id, { ...item, title: 'Regraded' });
+    await a.sync();
+    await deleteCourse(a.db, course.id);
+    await a.sync();
+    await a.sync();
+    expect((await readCourses(a.db)).some((c) => c.id === course.id)).toBe(false);
+    expect(await server.query('select count(*)::int as n from public.courses where id = $1', [course.id])).toEqual([{ n: 0 }]);
+  });
+
   it('syncs a saved-report import', async () => {
     const student = await newStudent();
     const a = await phone(student);
@@ -301,6 +344,40 @@ describeCloud('sync with the real server', () => {
     // The cloud's version comes back, so the phone and the cloud agree.
     await a.sync();
     expect((await readCourses(a.db))[0].name).toHaveLength(200);
+  });
+
+  it('keeps syncing when points possible is too small for the server (0.001)', async () => {
+    // The server stores two decimals: 0.001 became 0.00 and broke its check, so
+    // every later push from this phone failed.
+    const student = await newStudent();
+    const a = await phone(student);
+    const [course, period, category] = [randomUUID(), randomUUID(), randomUUID()];
+    await a.db.run(`insert into courses (id, name, grading_mode, position, source, dirty) values (?, 'Art', 'points', 1, 'manual', 1)`, [
+      course,
+    ]);
+    await a.db.run(`insert into grading_periods (id, course_id, name, kind, position, dirty) values (?, ?, 'Q1', 'quarter', 1, 1)`, [
+      period,
+      course,
+    ]);
+    await a.db.run(`insert into categories (id, period_id, name, position, dirty) values (?, ?, 'All', 1, 1)`, [
+      category,
+      period,
+    ]);
+    await a.db.run(
+      `insert into assignments (id, category_id, title, max_score, actual_score, position, dirty)
+       values (?, ?, 'Tiny', 0.001, null, 1, 1), (?, ?, 'Normal', 10, 9, 2, 1)`,
+      [randomUUID(), category, randomUUID(), category],
+    );
+    await a.sync();
+    expect(
+      await server.query(
+        'select title, max_score::float8 as max, extra_credit from public.assignments where student_id = $1 order by position',
+        [student],
+      ),
+    ).toEqual([
+      { title: 'Tiny', max: 0, extra_credit: true },
+      { title: 'Normal', max: 10, extra_credit: false },
+    ]);
   });
 
   it('syncs manual entry, forecasts, edits and deletes between two phones', async () => {

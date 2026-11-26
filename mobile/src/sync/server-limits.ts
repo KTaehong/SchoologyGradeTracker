@@ -48,11 +48,16 @@ function name(value: unknown, limit: number, fallback: string): string {
   return text.length > 0 ? text : fallback;
 }
 
+/**
+ * Between 0 and `max`, rounded to cents as the server's numeric(…, 2) columns
+ * store it. Rounding here matters: the server checks the stored value, so 0.001
+ * points possible would become 0 there and break `extra_credit or max_score > 0`.
+ */
 function clamp(value: unknown, max: number): number | null {
   if (value === null || value === undefined) return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
-  return Math.min(Math.max(n, 0), max);
+  return Math.round(Math.min(Math.max(n, 0), max) * 100) / 100;
 }
 
 /** A copy of `row` that the server accepts. */

@@ -124,7 +124,12 @@ easy to understand; field-by-field merging is not worth the complexity now.
 Other cases:
 - **An edit beats a delete.** When another device deleted a class (or a period or
   category) and this phone has unsent edits anywhere in it, the whole class is
-  kept and pushed back, on every device.
+  kept and pushed back, on every device. The other order too: when this phone
+  deleted a class and another device's edit inside it reaches the cloud first,
+  the pull undoes this phone's unsent delete (the whole class) and takes the
+  edit. A pulled row with the same values as this phone's copy is the phone's
+  own earlier push coming back, so that delete stands. (If both devices changed
+  the same row, the other device's edit wins for that row.)
 - A row whose parent is not in the cloud is skipped by `push_changes` (never an
   error that blocks every later push) and listed in its `skipped` reply. The
   phone keeps it unsent and sends it again together with its parents, or drops

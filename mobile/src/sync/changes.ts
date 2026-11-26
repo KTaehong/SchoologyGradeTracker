@@ -167,6 +167,77 @@ async function keepWhole(db: SqlDb, table: SyncTable, id: string, kept: Set<stri
   }
 }
 
+/** Whether two values of a column are the same, whatever form the server sent them in. */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === null || a === undefined || b === null || b === undefined) {
+    return (a ?? null) === (b ?? null);
+  }
+  if (typeof a === 'boolean' || typeof b === 'boolean') return Boolean(a) === Boolean(b);
+  if (typeof a === 'number' || typeof b === 'number') return Number(a) === Number(b);
+  if (a === b) return true;
+  // Timestamps: "…T00:00:00.000Z" here, "…T00:00:00+00:00" from Postgres.
+  const [x, y] = [String(a), String(b)];
+  return /^\d{4}-\d{2}-\d{2}T/.test(x) && /^\d{4}-\d{2}-\d{2}T/.test(y) && Date.parse(x) === Date.parse(y);
+}
+
+/**
+ * An edit beats a delete, also when the edit reached the cloud first: a pulled
+ * row that this phone has deleted (and not pushed yet) and whose values differ
+ * from this phone's copy was edited on another device. The delete is undone for
+ * the whole of what was deleted with it (from the top-most deleted parent down),
+ * so the class does not come back half empty. A pulled row with the same values
+ * is this phone's own earlier push coming back, so that delete stands.
+ *
+ * Returns the restored rows as `table:id`.
+ */
+async function undoDeletesEditedElsewhere(db: SqlDb, pull: ChangeSet): Promise<Set<string>> {
+  const restored = new Set<string>();
+  for (const table of SYNC_TABLES) {
+    for (const row of pull[table] ?? []) {
+      const id = String(row.id);
+      if (restored.has(`${table}:${id}`)) continue;
+      const local = await first<Record<string, SqlValue>>(
+        db,
+        `select * from ${table} where id = ? and deleted = 1 and dirty > 0`,
+        [id],
+      );
+      if (!local) continue;
+      const mine = toWire(table, local);
+      if (COLUMNS[table].every((c) => sameValue(mine[c], row[c]))) continue;
+
+      // Climb to the top-most parent that was deleted here too.
+      let [top, topId] = [table, id] as [SyncTable, string];
+      for (;;) {
+        const link = table === 'upcoming_items' ? undefined : PARENT[top];
+        if (!link) break;
+        const child = await first<Record<string, SqlValue>>(db, `select ${link.column} as parent from ${top} where id = ?`, [topId]);
+        const parentId = child?.parent;
+        if (parentId === null || parentId === undefined) break;
+        const parent = await first<{ deleted: number }>(db, `select deleted from ${link.table} where id = ?`, [String(parentId)]);
+        if (!parent || parent.deleted !== 1) break;
+        [top, topId] = [link.table, String(parentId)];
+      }
+      await restoreWhole(db, top, topId, restored);
+    }
+  }
+  return restored;
+}
+
+/** Undoes this phone's unsent delete of a row and everything in it. They stay unsent, so they are pushed back. */
+async function restoreWhole(db: SqlDb, table: SyncTable, id: string, restored: Set<string>): Promise<void> {
+  await db.run(`update ${table} set deleted = 0 where id = ? and deleted = 1`, [id]);
+  restored.add(`${table}:${id}`);
+  for (const child of CHILDREN[table] ?? []) {
+    const rows = await db.all<{ id: string }>(
+      `select id from ${child.table} where ${child.column} = ? and deleted = 1 and dirty > 0`,
+      [id],
+    );
+    for (const row of rows) {
+      await restoreWhole(db, child.table, row.id, restored);
+    }
+  }
+}
+
 /**
  * Saves rows pulled from the cloud. A row changed on this phone and not pushed
  * yet keeps the phone's version: it is pushed next, so the last phone to sync
@@ -175,7 +246,9 @@ async function keepWhole(db: SqlDb, table: SyncTable, id: string, kept: Set<stri
  * An edit beats a delete: when another device deleted a class (or a period or
  * category) and this phone has unsent edits anywhere in it, all of it is kept
  * and pushed back, so the edit is not lost and the class does not come back
- * half empty.
+ * half empty. The same holds the other way round: when this phone deleted
+ * something another device has since edited, the delete is undone (see
+ * undoDeletesEditedElsewhere).
  *
  * `check` and `after` run in the same transaction, first and last.
  * Returns how many rows changed here.
@@ -189,6 +262,7 @@ export async function applyRemoteChanges(
   let applied = 0;
   await db.transaction(async () => {
     await check?.();
+    const restored = await undoDeletesEditedElsewhere(db, pull);
     for (const table of SYNC_TABLES) {
       const columns = COLUMNS[table];
       const upsert = `insert into ${table} (${columns.join(', ')}, dirty, deleted)
@@ -200,7 +274,9 @@ export async function applyRemoteChanges(
         const local = await first<{ dirty: number }>(db, `select dirty from ${table} where id = ?`, [
           String(row.id),
         ]);
-        if (local && local.dirty > 0) {
+        // A restored row takes the other device's edit; the rest of what was
+        // restored stays unsent and is pushed back as it is.
+        if (local && local.dirty > 0 && !restored.has(`${table}:${String(row.id)}`)) {
           continue;
         }
         if (table === 'upcoming_items' && row.external_uid) {

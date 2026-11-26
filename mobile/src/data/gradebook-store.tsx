@@ -506,7 +506,9 @@ export function GradebookProvider({ children }: { children: ReactNode }) {
           const unsent = await countPendingChanges(db);
           if (unsent > 0) throw new UnsentChangesError(unsent);
         }
-        await apiSignOut();
+        // This phone only: signing out here must not sign the student out on
+        // their other devices (which may have their own unsent changes).
+        await apiSignOut('local');
         if (db) {
           await detachAccount(db);
           await reload(db);

@@ -64,7 +64,7 @@ Supabase project, put the same two names in `.env.local`, which overrides
 ## Checks
 
 ```bash
-npm test            # unit tests (Jest)
+npm test            # unit tests (Jest; screens with React Native Testing Library)
 npm run typecheck   # TypeScript
 npm run lint        # ESLint
 npm run test:e2e    # a browser uses the app like a student (see e2e/README.md)
@@ -93,6 +93,8 @@ npm run test:monkey # random taps and junk typing
   which *Settings → Data* can add (a new account starts empty).
 - `src/test-support/` — test helpers: an in-memory SQLite, a fake sync server, the
   real database in PGlite, and a client for the server's grade API.
+- `src/screens/__tests__/` — screen tests (React Native Testing Library). They
+  live here because every file in `src/app/` becomes a route.
 - `src/api/` — the cloud API. `client.ts` makes the one Supabase client, which
   keeps the sign-in session in secure storage and sends the token with every
   request; `auth.ts` signs in and out (email, Google, Apple);
